@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Modal from "@/components/Modal";
+import SearchSelect from "@/components/SearchSelect";
 import { api, ApiError, Client, ClientList, Invoice, Product, ProductList } from "@/lib/api";
 
 interface LineItem {
@@ -19,8 +20,7 @@ export default function NewInvoiceModal({
 }) {
   const [products, setProducts] = useState<Product[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
-  const [clientId, setClientId] = useState<string>("");
-  const [note, setNote] = useState("");
+  const [clientId, setClientId] = useState<number | "">("");
   const [lines, setLines] = useState<LineItem[]>([{ product_id: 0, quantity: 1, saleUnit: "unite" }]);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -74,8 +74,8 @@ export default function NewInvoiceModal({
     setSubmitting(true);
     try {
       const invoice = await api.post<Invoice>("/invoices", {
-        client_id: clientId ? Number(clientId) : null,
-        note: note || null,
+        client_id: clientId || null,
+        note: null,
         lines: validLines,
       });
       onCreated(invoice);
@@ -89,30 +89,16 @@ export default function NewInvoiceModal({
   return (
     <Modal title="Nouvelle facture" onClose={onClose}>
       <div className="space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Client (optionnel)</label>
-            <select
-              value={clientId}
-              onChange={(e) => setClientId(e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2"
-            >
-              <option value="">-- Aucun --</option>
-              {clients.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Note (optionnel)</label>
-            <input
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2"
-            />
-          </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Client</label>
+          <SearchSelect
+            options={clients.map((c) => ({ id: c.id, label: c.name, sublabel: c.phone || undefined }))}
+            value={clientId}
+            onChange={setClientId}
+            placeholder="Rechercher un client..."
+            allowEmpty
+            emptyLabel="-- Aucun --"
+          />
         </div>
 
         <div className="space-y-2">
@@ -123,18 +109,17 @@ export default function NewInvoiceModal({
             const hasPack = (product?.pack_size || 1) > 1;
             return (
               <div key={i} className="grid grid-cols-1 sm:grid-cols-12 gap-2 sm:items-center border-b sm:border-0 pb-3 sm:pb-0">
-                <select
+                <SearchSelect
+                  className="sm:col-span-4"
+                  options={products.map((p) => ({
+                    id: p.id,
+                    label: p.name,
+                    sublabel: `${p.quantity} dispo.${p.pack_size > 1 ? ` — carton de ${p.pack_size}` : ""}`,
+                  }))}
                   value={line.product_id || ""}
-                  onChange={(e) => updateLine(i, { product_id: Number(e.target.value), saleUnit: "unite" })}
-                  className="sm:col-span-4 rounded-md border border-gray-300 px-3 py-2"
-                >
-                  <option value="">-- Choisir un article --</option>
-                  {products.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} ({p.quantity} dispo.){p.pack_size > 1 ? ` — carton de ${p.pack_size}` : ""}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(id) => updateLine(i, { product_id: id || 0, saleUnit: "unite" })}
+                  placeholder="Rechercher un article..."
+                />
                 {hasPack ? (
                   <select
                     value={line.saleUnit}
