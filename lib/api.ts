@@ -158,13 +158,30 @@ export interface User {
   must_change_password: boolean;
 }
 
+export interface Category {
+  id: number;
+  name: string;
+  created_at: string;
+}
+
+export interface CategoryList {
+  items: Category[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+
 export interface Product {
   id: number;
   name: string;
+  category_id: number;
+  category_name: string;
   reference?: string | null;
   unit_price: number;
   quantity: number;
   unit: string;
+  pack_size: number;
   created_at: string;
 }
 

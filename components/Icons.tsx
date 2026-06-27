@@ -37,6 +37,15 @@ export function IconChart({ className = "w-[18px] h-[18px]" }: { className?: str
   );
 }
 
+export function IconTag({ className = "w-[18px] h-[18px]" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className}>
+      <path d="M11.5 3.5h6a2 2 0 0 1 2 2v6c0 .5-.2 1-.6 1.4l-8 8a2 2 0 0 1-2.8 0l-6-6a2 2 0 0 1 0-2.8l8-8c.4-.4.9-.6 1.4-.6Z" strokeLinejoin="round" />
+      <circle cx="15.5" cy="8.5" r="1.4" />
+    </svg>
+  );
+}
+
 export function IconInbox({ className = "w-[18px] h-[18px]" }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className}>

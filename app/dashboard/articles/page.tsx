@@ -3,13 +3,14 @@
 import { FormEvent, useEffect, useState } from "react";
 import Modal from "@/components/Modal";
 import { IconChart } from "@/components/Icons";
-import { api, ApiError, Product, ProductList, ProductStats } from "@/lib/api";
+import { api, ApiError, Category, CategoryList, Product, ProductList, ProductStats } from "@/lib/api";
 
-const emptyForm = { name: "", unit_price: "", quantity: "" };
+const emptyForm = { name: "", category_id: "", unit_price: "", quantity: "", pack_size: "1" };
 const PAGE_SIZE = 10;
 
 export default function ArticlesPage() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
@@ -58,6 +59,13 @@ export default function ArticlesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page]);
 
+  useEffect(() => {
+    api
+      .get<CategoryList>("/categories?page_size=100")
+      .then((list) => setCategories(list.items))
+      .catch(() => {});
+  }, []);
+
   function openCreate() {
     setEditingId(null);
     setForm(emptyForm);
@@ -69,8 +77,10 @@ export default function ArticlesPage() {
     setEditingId(p.id);
     setForm({
       name: p.name,
+      category_id: String(p.category_id),
       unit_price: String(p.unit_price),
       quantity: String(p.quantity),
+      pack_size: String(p.pack_size),
     });
     setFormError("");
     setShowModal(true);
@@ -83,11 +93,17 @@ export default function ArticlesPage() {
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setFormError("");
+    if (!form.category_id) {
+      setFormError("Choisissez une catégorie");
+      return;
+    }
     setSubmitting(true);
     const payload = {
       name: form.name,
+      category_id: Number(form.category_id),
       unit_price: parseFloat(form.unit_price),
       quantity: parseFloat(form.quantity),
+      pack_size: parseFloat(form.pack_size) || 1,
     };
     try {
       if (editingId) {
@@ -143,6 +159,7 @@ export default function ArticlesPage() {
           <thead className="bg-gray-50 text-gray-600 text-left">
             <tr>
               <th className="px-4 py-3">Nom</th>
+              <th className="px-4 py-3">Catégorie</th>
               <th className="px-4 py-3 text-right">Prix unitaire</th>
               <th className="px-4 py-3 text-right">Stock</th>
               <th className="px-4 py-3 text-right">Actions</th>
@@ -151,17 +168,23 @@ export default function ArticlesPage() {
           <tbody>
             {loading && (
               <tr>
-                <td colSpan={4} className="px-4 py-6 text-center text-gray-400">Chargement...</td>
+                <td colSpan={5} className="px-4 py-6 text-center text-gray-400">Chargement...</td>
               </tr>
             )}
             {!loading && products.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-4 py-6 text-center text-gray-400">Aucun article</td>
+                <td colSpan={5} className="px-4 py-6 text-center text-gray-400">Aucun article</td>
               </tr>
             )}
             {products.map((p) => (
               <tr key={p.id} className="border-t">
-                <td className="px-4 py-3 font-medium">{p.name}</td>
+                <td className="px-4 py-3 font-medium">
+                  {p.name}
+                  {p.pack_size > 1 && (
+                    <span className="block text-xs text-gray-400">Carton de {p.pack_size}</span>
+                  )}
+                </td>
+                <td className="px-4 py-3 text-gray-500">{p.category_name}</td>
                 <td className="px-4 py-3 text-right">{p.unit_price.toLocaleString()} FCFA</td>
                 <td className={`px-4 py-3 text-right ${p.quantity <= 0 ? "text-red-600 font-semibold" : ""}`}>
                   {p.quantity}
@@ -216,6 +239,29 @@ export default function ArticlesPage() {
                 className="w-full rounded-md border border-gray-300 px-3 py-2"
               />
             </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Catégorie</label>
+              {categories.length === 0 ? (
+                <p className="text-xs text-amber-600">
+                  Aucune catégorie pour l&apos;instant. Créez-en une dans l&apos;onglet Catégories avant
+                  d&apos;ajouter un article.
+                </p>
+              ) : (
+                <select
+                  required
+                  value={form.category_id}
+                  onChange={(e) => setForm({ ...form, category_id: e.target.value })}
+                  className="w-full rounded-md border border-gray-300 px-3 py-2"
+                >
+                  <option value="">-- Choisir --</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Prix unitaire</label>
@@ -229,7 +275,7 @@ export default function ArticlesPage() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Quantité</label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Quantité en stock</label>
                 <input
                   type="number"
                   step="0.01"
@@ -239,6 +285,23 @@ export default function ArticlesPage() {
                   className="w-full rounded-md border border-gray-300 px-3 py-2"
                 />
               </div>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">
+                Unités par carton <span className="text-gray-400">(optionnel, défaut 1)</span>
+              </label>
+              <input
+                type="number"
+                step="1"
+                min="1"
+                value={form.pack_size}
+                onChange={(e) => setForm({ ...form, pack_size: e.target.value })}
+                className="w-full rounded-md border border-gray-300 px-3 py-2"
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                Le prix unitaire et le stock restent comptés à l&apos;unité ; ce champ permet de vendre
+                aussi par carton sur les factures.
+              </p>
             </div>
 
             {formError && <p className="text-sm text-red-600">{formError}</p>}

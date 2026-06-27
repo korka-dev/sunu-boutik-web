@@ -7,6 +7,7 @@ import { api, ApiError, Client, ClientList, Invoice, Product, ProductList } from
 interface LineItem {
   product_id: number;
   quantity: number;
+  saleUnit: "unite" | "carton";
 }
 
 export default function NewInvoiceModal({
@@ -20,7 +21,7 @@ export default function NewInvoiceModal({
   const [clients, setClients] = useState<Client[]>([]);
   const [clientId, setClientId] = useState<string>("");
   const [note, setNote] = useState("");
-  const [lines, setLines] = useState<LineItem[]>([{ product_id: 0, quantity: 1 }]);
+  const [lines, setLines] = useState<LineItem[]>([{ product_id: 0, quantity: 1, saleUnit: "unite" }]);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -39,7 +40,7 @@ export default function NewInvoiceModal({
   }
 
   function addLine() {
-    setLines((prev) => [...prev, { product_id: 0, quantity: 1 }]);
+    setLines((prev) => [...prev, { product_id: 0, quantity: 1, saleUnit: "unite" }]);
   }
 
   function removeLine(index: number) {
@@ -50,14 +51,22 @@ export default function NewInvoiceModal({
     return products.find((p) => p.id === id);
   }
 
+  function baseQuantity(line: LineItem) {
+    const product = productOf(line.product_id);
+    const packSize = product?.pack_size || 1;
+    return line.saleUnit === "carton" ? line.quantity * packSize : line.quantity;
+  }
+
   const total = lines.reduce((sum, l) => {
     const p = productOf(l.product_id);
-    return sum + (p ? p.unit_price * l.quantity : 0);
+    return sum + (p ? p.unit_price * baseQuantity(l) : 0);
   }, 0);
 
   async function onSubmit() {
     setError("");
-    const validLines = lines.filter((l) => l.product_id && l.quantity > 0);
+    const validLines = lines
+      .filter((l) => l.product_id && l.quantity > 0)
+      .map((l) => ({ product_id: l.product_id, quantity: baseQuantity(l) }));
     if (validLines.length === 0) {
       setError("Ajoutez au moins un article valide");
       return;
@@ -110,21 +119,34 @@ export default function NewInvoiceModal({
           <label className="block text-xs font-medium text-gray-600 mb-1">Articles</label>
           {lines.map((line, i) => {
             const product = productOf(line.product_id);
-            const lineTotal = product ? product.unit_price * line.quantity : 0;
+            const lineTotal = product ? product.unit_price * baseQuantity(line) : 0;
+            const hasPack = (product?.pack_size || 1) > 1;
             return (
               <div key={i} className="grid grid-cols-1 sm:grid-cols-12 gap-2 sm:items-center border-b sm:border-0 pb-3 sm:pb-0">
                 <select
                   value={line.product_id || ""}
-                  onChange={(e) => updateLine(i, { product_id: Number(e.target.value) })}
-                  className="sm:col-span-5 rounded-md border border-gray-300 px-3 py-2"
+                  onChange={(e) => updateLine(i, { product_id: Number(e.target.value), saleUnit: "unite" })}
+                  className="sm:col-span-4 rounded-md border border-gray-300 px-3 py-2"
                 >
                   <option value="">-- Choisir un article --</option>
                   {products.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.name} ({p.quantity} dispo.)
+                      {p.name} ({p.quantity} dispo.){p.pack_size > 1 ? ` — carton de ${p.pack_size}` : ""}
                     </option>
                   ))}
                 </select>
+                {hasPack ? (
+                  <select
+                    value={line.saleUnit}
+                    onChange={(e) => updateLine(i, { saleUnit: e.target.value as "unite" | "carton" })}
+                    className="sm:col-span-2 rounded-md border border-gray-300 px-3 py-2 text-sm"
+                  >
+                    <option value="unite">À l&apos;unité</option>
+                    <option value="carton">Par carton</option>
+                  </select>
+                ) : (
+                  <div className="hidden sm:block sm:col-span-2" />
+                )}
                 <input
                   type="number"
                   step="0.01"
@@ -133,7 +155,7 @@ export default function NewInvoiceModal({
                   onChange={(e) => updateLine(i, { quantity: Number(e.target.value) })}
                   className="sm:col-span-2 rounded-md border border-gray-300 px-3 py-2"
                 />
-                <div className="sm:col-span-3 flex items-center justify-between sm:justify-end text-sm text-gray-600">
+                <div className="sm:col-span-2 flex items-center justify-between sm:justify-end text-sm text-gray-600">
                   <span className="sm:hidden">Sous-total</span>
                   {lineTotal.toLocaleString()} FCFA
                 </div>
