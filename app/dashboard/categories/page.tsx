@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import Modal from "@/components/Modal";
+import SearchBar from "@/components/SearchBar";
 import { api, ApiError, Category, CategoryList } from "@/lib/api";
 
 const PAGE_SIZE = 10;
@@ -9,6 +10,7 @@ const PAGE_SIZE = 10;
 export default function CategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -24,7 +26,9 @@ export default function CategoriesPage() {
     setLoading(true);
     setError("");
     try {
-      const list = await api.get<CategoryList>(`/categories?page=${page}&page_size=${PAGE_SIZE}`);
+      const params = new URLSearchParams({ page: String(page), page_size: String(PAGE_SIZE) });
+      if (search) params.set("search", search);
+      const list = await api.get<CategoryList>(`/categories?${params.toString()}`);
       setCategories(list.items);
       setTotalPages(list.total_pages);
       setTotal(list.total);
@@ -38,7 +42,12 @@ export default function CategoriesPage() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page]);
+  }, [page, search]);
+
+  function onSearchChange(value: string) {
+    setSearch(value);
+    setPage(1);
+  }
 
   function openCreate() {
     setEditingId(null);
@@ -99,6 +108,8 @@ export default function CategoriesPage() {
           + Ajouter catégorie
         </button>
       </div>
+
+      <SearchBar value={search} onChange={onSearchChange} placeholder="Rechercher une catégorie..." />
 
       {error && <p className="text-sm text-red-600">{error}</p>}
 

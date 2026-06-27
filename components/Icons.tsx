@@ -46,6 +46,15 @@ export function IconTag({ className = "w-[18px] h-[18px]" }: { className?: strin
   );
 }
 
+export function IconSearch({ className = "w-[18px] h-[18px]" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className}>
+      <circle cx="10.5" cy="10.5" r="6.5" />
+      <path d="M20 20l-4.7-4.7" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function IconInbox({ className = "w-[18px] h-[18px]" }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className}>

@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import Modal from "@/components/Modal";
+import SearchBar from "@/components/SearchBar";
 import { IconChart } from "@/components/Icons";
 import { api, ApiError, Category, CategoryList, Product, ProductList, ProductStats } from "@/lib/api";
 
@@ -12,6 +13,7 @@ export default function ArticlesPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -43,7 +45,9 @@ export default function ArticlesPage() {
     setLoading(true);
     setError("");
     try {
-      const list = await api.get<ProductList>(`/products?page=${page}&page_size=${PAGE_SIZE}`);
+      const params = new URLSearchParams({ page: String(page), page_size: String(PAGE_SIZE) });
+      if (search) params.set("search", search);
+      const list = await api.get<ProductList>(`/products?${params.toString()}`);
       setProducts(list.items);
       setTotalPages(list.total_pages);
       setTotal(list.total);
@@ -57,7 +61,12 @@ export default function ArticlesPage() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page]);
+  }, [page, search]);
+
+  function onSearchChange(value: string) {
+    setSearch(value);
+    setPage(1);
+  }
 
   useEffect(() => {
     api
@@ -151,6 +160,8 @@ export default function ArticlesPage() {
           </button>
         </div>
       </div>
+
+      <SearchBar value={search} onChange={onSearchChange} placeholder="Rechercher un article..." />
 
       {error && <p className="text-sm text-red-600">{error}</p>}
 

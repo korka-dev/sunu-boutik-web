@@ -4,27 +4,32 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import NewInvoiceModal from "@/components/NewInvoiceModal";
+import SearchBar from "@/components/SearchBar";
 import { api, ApiError, Invoice } from "@/lib/api";
 
 export default function FacturesPage() {
   const router = useRouter();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showModal, setShowModal] = useState(false);
 
-  function load() {
+  function load(currentSearch: string) {
     setLoading(true);
+    const params = new URLSearchParams();
+    if (currentSearch) params.set("search", currentSearch);
     api
-      .get<Invoice[]>("/invoices")
+      .get<Invoice[]>(`/invoices?${params.toString()}`)
       .then(setInvoices)
       .catch((err) => setError(err instanceof ApiError ? err.message : "Erreur de chargement"))
       .finally(() => setLoading(false));
   }
 
   useEffect(() => {
-    load();
-  }, []);
+    load(search);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search]);
 
   function onCreated(invoice: Invoice) {
     setShowModal(false);
@@ -42,6 +47,8 @@ export default function FacturesPage() {
           + Nouvelle facture
         </button>
       </div>
+
+      <SearchBar value={search} onChange={setSearch} placeholder="Rechercher une facture (numéro)..." />
 
       {error && <p className="text-sm text-red-600">{error}</p>}
 

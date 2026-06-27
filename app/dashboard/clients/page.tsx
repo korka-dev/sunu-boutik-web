@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import Modal from "@/components/Modal";
+import SearchBar from "@/components/SearchBar";
 import { api, ApiError, Client, ClientList } from "@/lib/api";
 
 const emptyForm = { name: "", phone: "", address: "" };
@@ -10,6 +11,7 @@ const PAGE_SIZE = 10;
 export default function ClientsPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -25,7 +27,9 @@ export default function ClientsPage() {
     setLoading(true);
     setError("");
     try {
-      const list = await api.get<ClientList>(`/clients?page=${page}&page_size=${PAGE_SIZE}`);
+      const params = new URLSearchParams({ page: String(page), page_size: String(PAGE_SIZE) });
+      if (search) params.set("search", search);
+      const list = await api.get<ClientList>(`/clients?${params.toString()}`);
       setClients(list.items);
       setTotalPages(list.total_pages);
       setTotal(list.total);
@@ -39,7 +43,12 @@ export default function ClientsPage() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page]);
+  }, [page, search]);
+
+  function onSearchChange(value: string) {
+    setSearch(value);
+    setPage(1);
+  }
 
   function openCreate() {
     setEditingId(null);
@@ -101,6 +110,8 @@ export default function ClientsPage() {
           + Ajouter client
         </button>
       </div>
+
+      <SearchBar value={search} onChange={onSearchChange} placeholder="Rechercher un client..." />
 
       {error && <p className="text-sm text-red-600">{error}</p>}
 
