@@ -70,12 +70,17 @@ export default function CategoriesPage() {
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setFormError("");
+    const trimmed = name.trim();
+    if (!trimmed) {
+      setFormError("Le nom de la catégorie est requis");
+      return;
+    }
     setSubmitting(true);
     try {
       if (editingId) {
-        await api.patch(`/categories/${editingId}`, { name });
+        await api.patch(`/categories/${editingId}`, { name: trimmed });
       } else {
-        await api.post("/categories", { name });
+        await api.post("/categories", { name: trimmed });
         setPage(1);
       }
       closeModal();
@@ -179,7 +184,6 @@ export default function CategoriesPage() {
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Nom</label>
               <input
-                required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="w-full rounded-md border border-gray-300 px-3 py-2"
