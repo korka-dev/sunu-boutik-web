@@ -3,10 +3,11 @@
 import { FormEvent, useEffect, useState } from "react";
 import Modal from "@/components/Modal";
 import SearchBar from "@/components/SearchBar";
+import SearchSelect from "@/components/SearchSelect";
 import { IconChart } from "@/components/Icons";
 import { api, ApiError, Category, CategoryList, Product, ProductList, ProductStats } from "@/lib/api";
 
-const emptyForm = { name: "", category_id: "", unit_price: "", quantity: "", pack_size: "1" };
+const emptyForm = { name: "", category_id: "" as number | "", unit_price: "", quantity: "" };
 const PAGE_SIZE = 10;
 
 export default function ArticlesPage() {
@@ -86,10 +87,9 @@ export default function ArticlesPage() {
     setEditingId(p.id);
     setForm({
       name: p.name,
-      category_id: String(p.category_id),
+      category_id: p.category_id,
       unit_price: String(p.unit_price),
       quantity: String(p.quantity),
-      pack_size: String(p.pack_size),
     });
     setFormError("");
     setShowModal(true);
@@ -102,17 +102,33 @@ export default function ArticlesPage() {
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setFormError("");
+
+    const trimmedName = form.name.trim();
+    if (!trimmedName) {
+      setFormError("Le nom de l'article est requis");
+      return;
+    }
     if (!form.category_id) {
       setFormError("Choisissez une catégorie");
       return;
     }
+    const unitPrice = parseFloat(form.unit_price);
+    if (form.unit_price === "" || Number.isNaN(unitPrice) || unitPrice < 0) {
+      setFormError("Le prix unitaire doit être un nombre positif");
+      return;
+    }
+    const quantity = parseFloat(form.quantity);
+    if (form.quantity === "" || Number.isNaN(quantity) || quantity < 0) {
+      setFormError("La quantité en stock doit être un nombre positif");
+      return;
+    }
+
     setSubmitting(true);
     const payload = {
-      name: form.name,
+      name: trimmedName,
       category_id: Number(form.category_id),
-      unit_price: parseFloat(form.unit_price),
-      quantity: parseFloat(form.quantity),
-      pack_size: parseFloat(form.pack_size) || 1,
+      unit_price: unitPrice,
+      quantity,
     };
     try {
       if (editingId) {
@@ -189,12 +205,7 @@ export default function ArticlesPage() {
             )}
             {products.map((p) => (
               <tr key={p.id} className="border-t">
-                <td className="px-4 py-3 font-medium">
-                  {p.name}
-                  {p.pack_size > 1 && (
-                    <span className="block text-xs text-gray-400">Carton de {p.pack_size}</span>
-                  )}
-                </td>
+                <td className="px-4 py-3 font-medium">{p.name}</td>
                 <td className="px-4 py-3 text-gray-500">{p.category_name}</td>
                 <td className="px-4 py-3 text-right">{p.unit_price.toLocaleString()} FCFA</td>
                 <td className={`px-4 py-3 text-right ${p.quantity <= 0 ? "text-red-600 font-semibold" : ""}`}>
@@ -244,7 +255,6 @@ export default function ArticlesPage() {
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Nom</label>
               <input
-                required
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 className="w-full rounded-md border border-gray-300 px-3 py-2"
@@ -258,19 +268,12 @@ export default function ArticlesPage() {
                   d&apos;ajouter un article.
                 </p>
               ) : (
-                <select
-                  required
+                <SearchSelect
+                  options={categories.map((c) => ({ id: c.id, label: c.name }))}
                   value={form.category_id}
-                  onChange={(e) => setForm({ ...form, category_id: e.target.value })}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2"
-                >
-                  <option value="">-- Choisir --</option>
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(id) => setForm({ ...form, category_id: id })}
+                  placeholder="Rechercher une catégorie..."
+                />
               )}
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -279,7 +282,6 @@ export default function ArticlesPage() {
                 <input
                   type="number"
                   step="0.01"
-                  required
                   value={form.unit_price}
                   onChange={(e) => setForm({ ...form, unit_price: e.target.value })}
                   className="w-full rounded-md border border-gray-300 px-3 py-2"
@@ -290,29 +292,11 @@ export default function ArticlesPage() {
                 <input
                   type="number"
                   step="0.01"
-                  required
                   value={form.quantity}
                   onChange={(e) => setForm({ ...form, quantity: e.target.value })}
                   className="w-full rounded-md border border-gray-300 px-3 py-2"
                 />
               </div>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">
-                Unités par carton <span className="text-gray-400">(optionnel, défaut 1)</span>
-              </label>
-              <input
-                type="number"
-                step="1"
-                min="1"
-                value={form.pack_size}
-                onChange={(e) => setForm({ ...form, pack_size: e.target.value })}
-                className="w-full rounded-md border border-gray-300 px-3 py-2"
-              />
-              <p className="text-xs text-gray-400 mt-1">
-                Le prix unitaire et le stock restent comptés à l&apos;unité ; ce champ permet de vendre
-                aussi par carton sur les factures.
-              </p>
             </div>
 
             {formError && <p className="text-sm text-red-600">{formError}</p>}
