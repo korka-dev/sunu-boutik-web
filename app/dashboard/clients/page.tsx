@@ -71,8 +71,20 @@ export default function ClientsPage() {
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setFormError("");
+
+    const trimmedName = form.name.trim();
+    if (!trimmedName) {
+      setFormError("Le nom du client est requis");
+      return;
+    }
+    const trimmedPhone = form.phone.trim();
+    if (trimmedPhone && !/^\d{9}$/.test(trimmedPhone)) {
+      setFormError("Le téléphone doit contenir exactement 9 chiffres");
+      return;
+    }
+
     setSubmitting(true);
-    const payload = { name: form.name, phone: form.phone || null, address: form.address || null };
+    const payload = { name: trimmedName, phone: trimmedPhone || null, address: form.address.trim() || null };
     try {
       if (editingId) {
         await api.patch(`/clients/${editingId}`, payload);
@@ -185,17 +197,20 @@ export default function ClientsPage() {
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Nom</label>
               <input
-                required
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 className="w-full rounded-md border border-gray-300 px-3 py-2"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Téléphone</label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">
+                Téléphone <span className="text-gray-400">(optionnel, 9 chiffres)</span>
+              </label>
               <input
                 value={form.phone}
-                onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                onChange={(e) => setForm({ ...form, phone: e.target.value.replace(/[^\d]/g, "") })}
+                maxLength={9}
+                inputMode="numeric"
                 className="w-full rounded-md border border-gray-300 px-3 py-2"
               />
             </div>
