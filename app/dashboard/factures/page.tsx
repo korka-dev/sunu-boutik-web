@@ -41,30 +41,33 @@ export default function FacturesPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="font-semibold text-lg">Factures</h2>
-        <button
-          onClick={() => setShowModal(true)}
-          className="bg-blue-600 text-white rounded-md px-3 sm:px-4 py-2 text-sm font-medium hover:bg-blue-700"
-        >
-          + Nouvelle facture
-        </button>
-      </div>
-
-      <div className="flex flex-col items-center gap-3">
-        <SearchBar value={search} onChange={setSearch} placeholder="Rechercher une facture (numéro)..." />
         <div className="flex items-center gap-2">
           <input
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="rounded-full border border-gray-300 bg-white px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           {date && (
             <button onClick={() => setDate("")} className="text-sm text-gray-500 hover:underline">
-              Effacer la date
+              Effacer
             </button>
           )}
+          <button
+            onClick={() => setShowModal(true)}
+            className="bg-blue-600 text-white rounded-md px-3 sm:px-4 py-2 text-sm font-medium hover:bg-blue-700"
+          >
+            + Nouvelle facture
+          </button>
         </div>
       </div>
+
+      <SearchBar
+        value={search}
+        onChange={setSearch}
+        placeholder="Rechercher une facture (numéro)..."
+        maxWidthClassName="max-w-2xl"
+      />
 
       {error && <p className="text-sm text-red-600">{error}</p>}
 

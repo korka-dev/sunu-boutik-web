@@ -7,10 +7,12 @@ export default function SearchBar({
   value,
   onChange,
   placeholder = "Rechercher...",
+  maxWidthClassName = "max-w-md",
 }: {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
+  maxWidthClassName?: string;
 }) {
   const [draft, setDraft] = useState(value);
 
@@ -28,7 +30,7 @@ export default function SearchBar({
 
   return (
     <div className="sticky top-0 z-10 -mx-4 sm:-mx-6 md:-mx-8 px-4 sm:px-6 md:px-8 py-3 bg-gray-50/95 backdrop-blur-sm">
-      <div className="mx-auto max-w-md relative">
+      <div className={`mx-auto relative ${maxWidthClassName}`}>
         <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
         <input
           value={draft}
