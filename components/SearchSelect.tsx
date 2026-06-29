@@ -16,6 +16,9 @@ export default function SearchSelect({
   allowEmpty,
   emptyLabel,
   className = "",
+  allowFreeText,
+  freeTextValue,
+  onFreeTextChange,
 }: {
   options: Option[];
   value: number | "";
@@ -24,6 +27,9 @@ export default function SearchSelect({
   allowEmpty?: boolean;
   emptyLabel?: string;
   className?: string;
+  allowFreeText?: boolean;
+  freeTextValue?: string;
+  onFreeTextChange?: (text: string) => void;
 }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
@@ -32,14 +38,21 @@ export default function SearchSelect({
   const selected = options.find((o) => o.id === value);
 
   useEffect(() => {
-    setQuery(selected ? selected.label : "");
+    if (selected) {
+      setQuery(selected.label);
+    } else if (allowFreeText) {
+      setQuery(freeTextValue || "");
+    } else {
+      setQuery("");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected?.id, selected?.label]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setOpen(false);
-        setQuery(selected ? selected.label : "");
+        if (selected) setQuery(selected.label);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -56,6 +69,7 @@ export default function SearchSelect({
           setQuery(e.target.value);
           setOpen(true);
           if (value !== "") onChange("");
+          if (allowFreeText) onFreeTextChange?.(e.target.value);
         }}
         onFocus={() => setOpen(true)}
         placeholder={placeholder}
@@ -85,6 +99,7 @@ export default function SearchSelect({
                 onChange(o.id);
                 setQuery(o.label);
                 setOpen(false);
+                if (allowFreeText) onFreeTextChange?.("");
               }}
               className="block w-full text-left px-3 py-2 text-sm hover:bg-blue-50"
             >

@@ -129,18 +129,13 @@ export default function NewInvoiceModal({
             options={clients.map((c) => ({ id: c.id, label: c.name, sublabel: c.phone || undefined }))}
             value={clientId}
             onChange={setClientId}
-            placeholder="Rechercher un client..."
+            placeholder="Rechercher un client ou saisir un nom..."
             allowEmpty
             emptyLabel="-- Aucun --"
+            allowFreeText
+            freeTextValue={clientName}
+            onFreeTextChange={setClientName}
           />
-          {!clientId && (
-            <input
-              value={clientName}
-              onChange={(e) => setClientName(e.target.value)}
-              placeholder="Ou nom du client (client de passage)"
-              className="w-full mt-2 rounded-md border border-gray-300 px-3 py-2 text-sm"
-            />
-          )}
         </div>
 
         <div className="space-y-2">
