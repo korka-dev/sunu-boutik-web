@@ -9,19 +9,33 @@ interface LineItem {
   product_id: number;
   quantity: number;
   saleUnit: "unite" | "carton";
+  unitPriceOverride: string;
 }
 
 export default function NewInvoiceModal({
+  invoice,
   onClose,
   onCreated,
 }: {
+  invoice?: Invoice;
   onClose: () => void;
   onCreated: (invoice: Invoice) => void;
 }) {
+  const isEdit = !!invoice;
   const [products, setProducts] = useState<Product[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
-  const [clientId, setClientId] = useState<number | "">("");
-  const [lines, setLines] = useState<LineItem[]>([{ product_id: 0, quantity: 1, saleUnit: "unite" }]);
+  const [clientId, setClientId] = useState<number | "">(invoice?.client_id || "");
+  const [clientName, setClientName] = useState(invoice?.client_name || "");
+  const [lines, setLines] = useState<LineItem[]>(
+    invoice && invoice.lines.length > 0
+      ? invoice.lines.map((l) => ({
+          product_id: l.product_id,
+          quantity: l.quantity,
+          saleUnit: "unite",
+          unitPriceOverride: String(l.unit_price),
+        }))
+      : [{ product_id: 0, quantity: 1, saleUnit: "unite", unitPriceOverride: "" }]
+  );
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -40,7 +54,7 @@ export default function NewInvoiceModal({
   }
 
   function addLine() {
-    setLines((prev) => [...prev, { product_id: 0, quantity: 1, saleUnit: "unite" }]);
+    setLines((prev) => [...prev, { product_id: 0, quantity: 1, saleUnit: "unite", unitPriceOverride: "" }]);
   }
 
   function removeLine(index: number) {
@@ -57,37 +71,57 @@ export default function NewInvoiceModal({
     return line.saleUnit === "carton" ? line.quantity * packSize : line.quantity;
   }
 
-  const total = lines.reduce((sum, l) => {
-    const p = productOf(l.product_id);
-    return sum + (p ? p.unit_price * baseQuantity(l) : 0);
-  }, 0);
+  function effectiveUnitPrice(line: LineItem) {
+    const product = productOf(line.product_id);
+    if (line.unitPriceOverride !== "" && !Number.isNaN(parseFloat(line.unitPriceOverride))) {
+      return parseFloat(line.unitPriceOverride);
+    }
+    return product?.unit_price || 0;
+  }
+
+  const total = lines.reduce((sum, l) => sum + effectiveUnitPrice(l) * baseQuantity(l), 0);
 
   async function onSubmit() {
     setError("");
     const validLines = lines
       .filter((l) => l.product_id && l.quantity > 0)
-      .map((l) => ({ product_id: l.product_id, quantity: baseQuantity(l) }));
+      .map((l) => {
+        const override = l.unitPriceOverride !== "" ? parseFloat(l.unitPriceOverride) : NaN;
+        return {
+          product_id: l.product_id,
+          quantity: baseQuantity(l),
+          unit_price: Number.isNaN(override) ? null : override,
+        };
+      });
     if (validLines.length === 0) {
       setError("Ajoutez au moins un article valide");
       return;
     }
+    if (validLines.some((l) => l.unit_price !== null && l.unit_price < 0)) {
+      setError("Le prix unitaire ne peut pas être négatif");
+      return;
+    }
     setSubmitting(true);
     try {
-      const invoice = await api.post<Invoice>("/invoices", {
+      const payload = {
         client_id: clientId || null,
+        client_name: clientId ? null : clientName.trim() || null,
         note: null,
         lines: validLines,
-      });
-      onCreated(invoice);
+      };
+      const result = isEdit
+        ? await api.patch<Invoice>(`/invoices/${invoice!.id}`, payload)
+        : await api.post<Invoice>("/invoices", payload);
+      onCreated(result);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Erreur lors de la création de la facture");
+      setError(err instanceof ApiError ? err.message : "Erreur lors de l'enregistrement de la facture");
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <Modal title="Nouvelle facture" onClose={onClose}>
+    <Modal title={isEdit ? `Modifier la facture ${invoice!.number}` : "Nouvelle facture"} onClose={onClose}>
       <div className="space-y-4">
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">Client</label>
@@ -99,25 +133,37 @@ export default function NewInvoiceModal({
             allowEmpty
             emptyLabel="-- Aucun --"
           />
+          {!clientId && (
+            <input
+              value={clientName}
+              onChange={(e) => setClientName(e.target.value)}
+              placeholder="Ou nom du client (client de passage)"
+              className="w-full mt-2 rounded-md border border-gray-300 px-3 py-2 text-sm"
+            />
+          )}
         </div>
 
         <div className="space-y-2">
           <label className="block text-xs font-medium text-gray-600 mb-1">Articles</label>
           {lines.map((line, i) => {
             const product = productOf(line.product_id);
-            const lineTotal = product ? product.unit_price * baseQuantity(line) : 0;
+            const unitPrice = effectiveUnitPrice(line);
+            const lineTotal = unitPrice * baseQuantity(line);
             const hasPack = (product?.pack_size || 1) > 1;
             return (
               <div key={i} className="grid grid-cols-1 sm:grid-cols-12 gap-2 sm:items-center border-b sm:border-0 pb-3 sm:pb-0">
                 <SearchSelect
-                  className="sm:col-span-4"
+                  className="sm:col-span-3"
                   options={products.map((p) => ({
                     id: p.id,
                     label: p.name,
                     sublabel: `${p.quantity} dispo.${p.pack_size > 1 ? ` — carton de ${p.pack_size}` : ""}`,
                   }))}
                   value={line.product_id || ""}
-                  onChange={(id) => updateLine(i, { product_id: id || 0, saleUnit: "unite" })}
+                  onChange={(id) => {
+                    const p = products.find((pr) => pr.id === id);
+                    updateLine(i, { product_id: id || 0, saleUnit: "unite", unitPriceOverride: p ? String(p.unit_price) : "" });
+                  }}
                   placeholder="Rechercher un article..."
                 />
                 {hasPack ? (
@@ -139,6 +185,16 @@ export default function NewInvoiceModal({
                   value={line.quantity}
                   onChange={(e) => updateLine(i, { quantity: Number(e.target.value) })}
                   className="sm:col-span-2 rounded-md border border-gray-300 px-3 py-2"
+                  placeholder="Qté"
+                />
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={line.unitPriceOverride}
+                  onChange={(e) => updateLine(i, { unitPriceOverride: e.target.value })}
+                  className="sm:col-span-2 rounded-md border border-gray-300 px-3 py-2"
+                  placeholder="Prix unitaire"
                 />
                 <div className="sm:col-span-2 flex items-center justify-between sm:justify-end text-sm text-gray-600">
                   <span className="sm:hidden">Sous-total</span>
@@ -147,7 +203,7 @@ export default function NewInvoiceModal({
                 <button
                   type="button"
                   onClick={() => removeLine(i)}
-                  className="sm:col-span-2 text-red-600 hover:underline text-sm text-left"
+                  className="sm:col-span-1 text-red-600 hover:underline text-sm text-left"
                 >
                   Retirer
                 </button>
@@ -167,7 +223,7 @@ export default function NewInvoiceModal({
             disabled={submitting}
             className="bg-blue-600 text-white rounded-md px-5 py-2 font-medium hover:bg-blue-700 disabled:opacity-50"
           >
-            {submitting ? "Création..." : "Créer la facture"}
+            {submitting ? "Enregistrement..." : isEdit ? "Enregistrer les modifications" : "Créer la facture"}
           </button>
         </div>
         {error && <p className="text-sm text-red-600">{error}</p>}

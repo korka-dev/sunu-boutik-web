@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import NewInvoiceModal from "@/components/NewInvoiceModal";
 import SearchBar from "@/components/SearchBar";
@@ -11,14 +10,16 @@ export default function FacturesPage() {
   const router = useRouter();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [search, setSearch] = useState("");
+  const [date, setDate] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showModal, setShowModal] = useState(false);
 
-  function load(currentSearch: string) {
+  function load(currentSearch: string, currentDate: string) {
     setLoading(true);
     const params = new URLSearchParams();
     if (currentSearch) params.set("search", currentSearch);
+    if (currentDate) params.set("date", currentDate);
     api
       .get<Invoice[]>(`/invoices?${params.toString()}`)
       .then(setInvoices)
@@ -27,9 +28,9 @@ export default function FacturesPage() {
   }
 
   useEffect(() => {
-    load(search);
+    load(search, date);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search]);
+  }, [search, date]);
 
   function onCreated(invoice: Invoice) {
     setShowModal(false);
@@ -48,7 +49,22 @@ export default function FacturesPage() {
         </button>
       </div>
 
-      <SearchBar value={search} onChange={setSearch} placeholder="Rechercher une facture (numéro)..." />
+      <div className="flex flex-col items-center gap-3">
+        <SearchBar value={search} onChange={setSearch} placeholder="Rechercher une facture (numéro)..." />
+        <div className="flex items-center gap-2">
+          <input
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className="rounded-full border border-gray-300 bg-white px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          {date && (
+            <button onClick={() => setDate("")} className="text-sm text-gray-500 hover:underline">
+              Effacer la date
+            </button>
+          )}
+        </div>
+      </div>
 
       {error && <p className="text-sm text-red-600">{error}</p>}
 
@@ -74,16 +90,18 @@ export default function FacturesPage() {
               </tr>
             )}
             {invoices.map((inv) => (
-              <tr key={inv.id} className="border-t">
+              <tr
+                key={inv.id}
+                onClick={() => router.push(`/dashboard/factures/${inv.id}`)}
+                className="border-t cursor-pointer hover:bg-gray-50"
+              >
                 <td className="px-4 py-3 font-medium">{inv.number}</td>
                 <td className="px-4 py-3 text-gray-500">
                   {new Date(inv.created_at).toLocaleString("fr-FR")}
                 </td>
                 <td className="px-4 py-3 text-right">{inv.total.toLocaleString()} FCFA</td>
                 <td className="px-4 py-3 text-right">
-                  <Link href={`/dashboard/factures/${inv.id}`} className="text-blue-600 hover:underline">
-                    Voir / Imprimer
-                  </Link>
+                  <span className="text-blue-600 hover:underline">Voir / Modifier</span>
                 </td>
               </tr>
             ))}

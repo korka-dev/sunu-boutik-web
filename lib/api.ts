@@ -222,6 +222,7 @@ export interface Invoice {
   id: number;
   number: string;
   client_id?: number | null;
+  client_name?: string | null;
   total: number;
   note?: string | null;
   created_at: string;
