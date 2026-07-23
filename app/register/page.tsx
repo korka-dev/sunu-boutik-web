@@ -12,6 +12,7 @@ export default function RegisterPage() {
     shop_name: "",
     shop_address: "",
     shop_phone: "",
+    shop_ninea: "",
     full_name: "",
     email: "",
   });
@@ -93,6 +94,17 @@ export default function RegisterPage() {
                 className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              NINEA <span className="text-gray-400">(optionnel)</span>
+            </label>
+            <input
+              value={form.shop_ninea}
+              onChange={update("shop_ninea")}
+              placeholder="Ex: 123456789"
+              className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Votre nom complet</label>
