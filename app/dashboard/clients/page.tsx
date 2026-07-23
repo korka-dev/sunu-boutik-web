@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import Modal from "@/components/Modal";
 import SearchBar from "@/components/SearchBar";
+import SkeletonRows from "@/components/SkeletonRows";
 import { api, ApiError, Client, ClientList } from "@/lib/api";
 
 const emptyForm = { name: "", phone: "", address: "" };
@@ -138,11 +139,7 @@ export default function ClientsPage() {
             </tr>
           </thead>
           <tbody>
-            {loading && (
-              <tr>
-                <td colSpan={4} className="px-4 py-6 text-center text-gray-400">Chargement...</td>
-              </tr>
-            )}
+            {loading && <SkeletonRows cols={4} />}
             {!loading && clients.length === 0 && (
               <tr>
                 <td colSpan={4} className="px-4 py-6 text-center text-gray-400">Aucun client</td>

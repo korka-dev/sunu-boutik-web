@@ -129,13 +129,15 @@ export const adminApi = {
     request<T>(path, { method: "POST", body: body ? JSON.stringify(body) : undefined }, getAdminToken),
 };
 
-export function pdfUrl(invoiceId: number): string {
-  return `${API_URL}/invoices/${invoiceId}/pdf`;
+export type PdfFormat = "ticket" | "a4";
+
+export function pdfUrl(invoiceId: number, format: PdfFormat = "ticket"): string {
+  return `${API_URL}/invoices/${invoiceId}/pdf?format=${format}`;
 }
 
-export async function fetchPdfBlob(invoiceId: number): Promise<Blob> {
+export async function fetchPdfBlob(invoiceId: number, format: PdfFormat = "ticket"): Promise<Blob> {
   const token = getToken();
-  const res = await fetch(`${API_URL}/invoices/${invoiceId}/pdf`, {
+  const res = await fetch(`${API_URL}/invoices/${invoiceId}/pdf?format=${format}`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   if (!res.ok) throw new ApiError("Impossible de générer le PDF", res.status);
@@ -227,6 +229,14 @@ export interface Invoice {
   note?: string | null;
   created_at: string;
   lines: InvoiceLine[];
+}
+
+export interface InvoiceList {
+  items: Invoice[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
 }
 
 export interface ShopAdmin {

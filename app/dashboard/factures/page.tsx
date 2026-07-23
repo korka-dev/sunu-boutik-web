@@ -4,33 +4,55 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import NewInvoiceModal from "@/components/NewInvoiceModal";
 import SearchBar from "@/components/SearchBar";
-import { api, ApiError, Invoice } from "@/lib/api";
+import SkeletonRows from "@/components/SkeletonRows";
+import { api, ApiError, Invoice, InvoiceList } from "@/lib/api";
+
+const PAGE_SIZE = 20;
 
 export default function FacturesPage() {
   const router = useRouter();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [date, setDate] = useState("");
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showModal, setShowModal] = useState(false);
 
-  function load(currentSearch: string, currentDate: string) {
+  async function load() {
     setLoading(true);
-    const params = new URLSearchParams();
-    if (currentSearch) params.set("search", currentSearch);
-    if (currentDate) params.set("date", currentDate);
-    api
-      .get<Invoice[]>(`/invoices?${params.toString()}`)
-      .then(setInvoices)
-      .catch((err) => setError(err instanceof ApiError ? err.message : "Erreur de chargement"))
-      .finally(() => setLoading(false));
+    setError("");
+    try {
+      const params = new URLSearchParams({ page: String(page), page_size: String(PAGE_SIZE) });
+      if (search) params.set("search", search);
+      if (date) params.set("date", date);
+      const list = await api.get<InvoiceList>(`/invoices?${params.toString()}`);
+      setInvoices(list.items);
+      setTotalPages(list.total_pages);
+      setTotal(list.total);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Erreur de chargement");
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
-    load(search, date);
+    load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, date]);
+  }, [page, search, date]);
+
+  function onSearchChange(value: string) {
+    setSearch(value);
+    setPage(1);
+  }
+
+  function onDateChange(value: string) {
+    setDate(value);
+    setPage(1);
+  }
 
   function onCreated(invoice: Invoice) {
     setShowModal(false);
@@ -45,11 +67,11 @@ export default function FacturesPage() {
           <input
             type="date"
             value={date}
-            onChange={(e) => setDate(e.target.value)}
+            onChange={(e) => onDateChange(e.target.value)}
             className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           {date && (
-            <button onClick={() => setDate("")} className="text-sm text-gray-500 hover:underline">
+            <button onClick={() => onDateChange("")} className="text-sm text-gray-500 hover:underline">
               Effacer
             </button>
           )}
@@ -64,7 +86,7 @@ export default function FacturesPage() {
 
       <SearchBar
         value={search}
-        onChange={setSearch}
+        onChange={onSearchChange}
         placeholder="Rechercher une facture (numéro)..."
         maxWidthClassName="max-w-2xl"
       />
@@ -82,11 +104,7 @@ export default function FacturesPage() {
             </tr>
           </thead>
           <tbody>
-            {loading && (
-              <tr>
-                <td colSpan={4} className="px-4 py-6 text-center text-gray-400">Chargement...</td>
-              </tr>
-            )}
+            {loading && <SkeletonRows cols={4} />}
             {!loading && invoices.length === 0 && (
               <tr>
                 <td colSpan={4} className="px-4 py-6 text-center text-gray-400">Aucune facture</td>
@@ -110,6 +128,30 @@ export default function FacturesPage() {
             ))}
           </tbody>
         </table>
+
+        {!loading && total > 0 && (
+          <div className="flex items-center justify-between px-4 py-3 border-t text-sm text-gray-500">
+            <span>
+              {total} facture{total > 1 ? "s" : ""} — page {page} / {totalPages}
+            </span>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setPage((p) => Math.max(p - 1, 1))}
+                disabled={page <= 1}
+                className="px-3 py-1.5 rounded-md border border-gray-300 disabled:opacity-40 hover:bg-gray-50"
+              >
+                Précédent
+              </button>
+              <button
+                onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
+                disabled={page >= totalPages}
+                className="px-3 py-1.5 rounded-md border border-gray-300 disabled:opacity-40 hover:bg-gray-50"
+              >
+                Suivant
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {showModal && <NewInvoiceModal onClose={() => setShowModal(false)} onCreated={onCreated} />}

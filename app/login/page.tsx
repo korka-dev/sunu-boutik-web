@@ -67,7 +67,13 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <p className="text-sm text-center text-gray-500 mt-6">
+        <p className="text-sm text-center mt-3">
+          <Link href="/forgot-password" className="text-blue-600 hover:underline">
+            Mot de passe oublié ?
+          </Link>
+        </p>
+
+        <p className="text-sm text-center text-gray-500 mt-4">
           Pas encore de compte ?{" "}
           <Link href="/register" className="text-blue-600 font-medium">
             Créer ma boutique

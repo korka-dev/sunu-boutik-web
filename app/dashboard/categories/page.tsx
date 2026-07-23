@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import Modal from "@/components/Modal";
 import SearchBar from "@/components/SearchBar";
+import SkeletonRows from "@/components/SkeletonRows";
 import { api, ApiError, Category, CategoryList } from "@/lib/api";
 
 const PAGE_SIZE = 10;
@@ -127,11 +128,7 @@ export default function CategoriesPage() {
             </tr>
           </thead>
           <tbody>
-            {loading && (
-              <tr>
-                <td colSpan={2} className="px-4 py-6 text-center text-gray-400">Chargement...</td>
-              </tr>
-            )}
+            {loading && <SkeletonRows cols={2} />}
             {!loading && categories.length === 0 && (
               <tr>
                 <td colSpan={2} className="px-4 py-6 text-center text-gray-400">Aucune catégorie</td>

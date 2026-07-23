@@ -5,6 +5,7 @@ import Modal from "@/components/Modal";
 import SearchBar from "@/components/SearchBar";
 import SearchSelect from "@/components/SearchSelect";
 import { IconChart } from "@/components/Icons";
+import SkeletonRows from "@/components/SkeletonRows";
 import { api, ApiError, Category, CategoryList, Product, ProductList, ProductStats } from "@/lib/api";
 
 const emptyForm = { name: "", category_id: "" as number | "", unit_price: "", quantity: "" };
@@ -193,11 +194,7 @@ export default function ArticlesPage() {
             </tr>
           </thead>
           <tbody>
-            {loading && (
-              <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-gray-400">Chargement...</td>
-              </tr>
-            )}
+            {loading && <SkeletonRows cols={5} />}
             {!loading && products.length === 0 && (
               <tr>
                 <td colSpan={5} className="px-4 py-6 text-center text-gray-400">Aucun article</td>
