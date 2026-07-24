@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import SearchBar from "@/components/SearchBar";
 import SkeletonRows from "@/components/SkeletonRows";
-import { api, ApiError, Invoice, InvoiceList } from "@/lib/api";
+import { api, ApiError, Invoice, InvoiceList, getToken } from "@/lib/api";
 
 const PAGE_SIZE = 20;
 
@@ -32,7 +32,7 @@ export default function FacturesPage() {
   const [exportFrom, setExportFrom] = useState(defaultDateFrom);
   const [exportTo, setExportTo] = useState(defaultDateTo);
   const [exporting, setExporting] = useState(false);
-  const [showExport, setShowExport] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -71,12 +71,15 @@ export default function FacturesPage() {
     setExporting(true);
     try {
       const params = new URLSearchParams({ date_from: exportFrom, date_to: exportTo });
-      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-      const base = process.env.NEXT_PUBLIC_API_URL ?? "/api";
+      const token = getToken();
+      const base = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000").replace(/\/+$/, "");
       const res = await fetch(`${base}/invoices/export?${params.toString()}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
-      if (!res.ok) throw new Error("Erreur lors de l'export");
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || `Erreur ${res.status}`);
+      }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -84,6 +87,7 @@ export default function FacturesPage() {
       a.download = `EIP_factures_${exportFrom}_${exportTo}.xlsx`;
       a.click();
       URL.revokeObjectURL(url);
+      setShowExportModal(false);
     } catch (err) {
       alert(err instanceof Error ? err.message : "Erreur export");
     } finally {
@@ -108,7 +112,7 @@ export default function FacturesPage() {
             </button>
           )}
           <button
-            onClick={() => setShowExport((v) => !v)}
+            onClick={() => setShowExportModal(true)}
             className="flex items-center gap-1.5 border border-green-600 text-green-700 rounded-md px-3 py-2 text-sm font-medium hover:bg-green-50"
           >
             <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
@@ -125,39 +129,6 @@ export default function FacturesPage() {
           </button>
         </div>
       </div>
-
-      {showExport && (
-        <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex flex-wrap items-end gap-3">
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-gray-600">Du</label>
-            <input
-              type="date"
-              value={exportFrom}
-              onChange={(e) => setExportFrom(e.target.value)}
-              className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-gray-600">Au</label>
-            <input
-              type="date"
-              value={exportTo}
-              onChange={(e) => setExportTo(e.target.value)}
-              className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-            />
-          </div>
-          <button
-            onClick={handleExport}
-            disabled={exporting}
-            className="flex items-center gap-2 bg-green-600 text-white rounded-md px-4 py-2 text-sm font-medium hover:bg-green-700 disabled:opacity-60"
-          >
-            {exporting ? "Export en cours..." : "Télécharger Excel (EIP)"}
-          </button>
-          <p className="text-xs text-gray-400 w-full">
-            Le fichier sera nommé : EIP_factures_{exportFrom}_{exportTo}.xlsx
-          </p>
-        </div>
-      )}
 
       <SearchBar
         value={search}
@@ -229,6 +200,60 @@ export default function FacturesPage() {
         )}
       </div>
 
+    </div>
+
+      {/* Modal export Excel */}
+      {showExportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-5">
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold text-base">Télécharger les factures (Excel)</h3>
+              <button onClick={() => setShowExportModal(false)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-gray-600">Du</label>
+                <input
+                  type="date"
+                  value={exportFrom}
+                  onChange={(e) => setExportFrom(e.target.value)}
+                  className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-gray-600">Au</label>
+                <input
+                  type="date"
+                  value={exportTo}
+                  onChange={(e) => setExportTo(e.target.value)}
+                  className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                />
+              </div>
+            </div>
+
+            <p className="text-xs text-gray-400">
+              Fichier : <span className="font-mono">EIP_factures_{exportFrom}_{exportTo}.xlsx</span>
+            </p>
+
+            <div className="flex gap-3 pt-1">
+              <button
+                onClick={() => setShowExportModal(false)}
+                className="flex-1 border border-gray-300 rounded-lg py-2 text-sm font-medium text-gray-600 hover:bg-gray-50"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleExport}
+                disabled={exporting}
+                className="flex-1 bg-green-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-green-700 disabled:opacity-60"
+              >
+                {exporting ? "Export en cours..." : "Télécharger"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
