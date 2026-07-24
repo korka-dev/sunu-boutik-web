@@ -8,6 +8,17 @@ import { api, ApiError, Invoice, InvoiceList } from "@/lib/api";
 
 const PAGE_SIZE = 20;
 
+function defaultDateFrom() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
+}
+
+function defaultDateTo() {
+  const d = new Date();
+  const last = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+  return `${last.getFullYear()}-${String(last.getMonth() + 1).padStart(2, "0")}-${String(last.getDate()).padStart(2, "0")}`;
+}
+
 export default function FacturesPage() {
   const router = useRouter();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -18,6 +29,10 @@ export default function FacturesPage() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [exportFrom, setExportFrom] = useState(defaultDateFrom);
+  const [exportTo, setExportTo] = useState(defaultDateTo);
+  const [exporting, setExporting] = useState(false);
+  const [showExport, setShowExport] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -52,11 +67,35 @@ export default function FacturesPage() {
     setPage(1);
   }
 
+  async function handleExport() {
+    setExporting(true);
+    try {
+      const params = new URLSearchParams({ date_from: exportFrom, date_to: exportTo });
+      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+      const base = process.env.NEXT_PUBLIC_API_URL ?? "/api";
+      const res = await fetch(`${base}/invoices/export?${params.toString()}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) throw new Error("Erreur lors de l'export");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `EIP_factures_${exportFrom}_${exportTo}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Erreur export");
+    } finally {
+      setExporting(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="font-semibold text-lg">Factures</h2>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <input
             type="date"
             value={date}
@@ -69,6 +108,16 @@ export default function FacturesPage() {
             </button>
           )}
           <button
+            onClick={() => setShowExport((v) => !v)}
+            className="flex items-center gap-1.5 border border-green-600 text-green-700 rounded-md px-3 py-2 text-sm font-medium hover:bg-green-50"
+          >
+            <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+              <path d="M10.75 2.75a.75.75 0 0 0-1.5 0v8.614L6.295 8.235a.75.75 0 1 0-1.09 1.03l4.25 4.5a.75.75 0 0 0 1.09 0l4.25-4.5a.75.75 0 0 0-1.09-1.03l-2.955 3.129V2.75Z" />
+              <path d="M3.5 12.75a.75.75 0 0 0-1.5 0v2.5A2.75 2.75 0 0 0 4.75 18h10.5A2.75 2.75 0 0 0 18 15.25v-2.5a.75.75 0 0 0-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5Z" />
+            </svg>
+            Télécharger
+          </button>
+          <button
             onClick={() => router.push("/dashboard/factures/new")}
             className="bg-blue-600 text-white rounded-md px-3 sm:px-4 py-2 text-sm font-medium hover:bg-blue-700"
           >
@@ -76,6 +125,39 @@ export default function FacturesPage() {
           </button>
         </div>
       </div>
+
+      {showExport && (
+        <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex flex-wrap items-end gap-3">
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-gray-600">Du</label>
+            <input
+              type="date"
+              value={exportFrom}
+              onChange={(e) => setExportFrom(e.target.value)}
+              className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-gray-600">Au</label>
+            <input
+              type="date"
+              value={exportTo}
+              onChange={(e) => setExportTo(e.target.value)}
+              className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+          </div>
+          <button
+            onClick={handleExport}
+            disabled={exporting}
+            className="flex items-center gap-2 bg-green-600 text-white rounded-md px-4 py-2 text-sm font-medium hover:bg-green-700 disabled:opacity-60"
+          >
+            {exporting ? "Export en cours..." : "Télécharger Excel (EIP)"}
+          </button>
+          <p className="text-xs text-gray-400 w-full">
+            Le fichier sera nommé : EIP_factures_{exportFrom}_{exportTo}.xlsx
+          </p>
+        </div>
+      )}
 
       <SearchBar
         value={search}
