@@ -84,7 +84,7 @@ export default function FacturesPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `EIP_factures_${exportFrom}_${exportTo}.xlsx`;
+      a.download = `EIP_factures_${exportFrom}_${exportTo}.zip`;
       a.click();
       URL.revokeObjectURL(url);
       setShowExportModal(false);
@@ -231,7 +231,7 @@ export default function FacturesPage() {
             </div>
 
             <p className="text-xs text-gray-400">
-              Fichier : <span className="font-mono">EIP_factures_{exportFrom}_{exportTo}.xlsx</span>
+              Fichier : <span className="font-mono">EIP_factures_{exportFrom}_{exportTo}.zip</span>
             </p>
 
             <div className="flex gap-3 pt-1">
