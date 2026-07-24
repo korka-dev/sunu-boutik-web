@@ -4,13 +4,14 @@ import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { IconBox, IconReceipt, IconTag, IconUsers } from "@/components/Icons";
+import { IconBox, IconReceipt, IconTag, IconUsers, IconUser } from "@/components/Icons";
 
 const navItems = [
   { href: "/dashboard/categories", label: "Catégories", Icon: IconTag },
   { href: "/dashboard/articles", label: "Articles", Icon: IconBox },
   { href: "/dashboard/clients", label: "Clients", Icon: IconUsers },
   { href: "/dashboard/factures", label: "Factures", Icon: IconReceipt },
+  { href: "/dashboard/profil", label: "Profil", Icon: IconUser },
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {

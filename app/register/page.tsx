@@ -12,7 +12,10 @@ export default function RegisterPage() {
     shop_name: "",
     shop_address: "",
     shop_phone: "",
+    shop_phone2: "",
+    shop_phone3: "",
     shop_ninea: "",
+    shop_rc: "",
     full_name: "",
     email: "",
   });
@@ -87,24 +90,62 @@ export default function RegisterPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Téléphone</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Téléphone 1</label>
               <input
                 value={form.shop_phone}
                 onChange={update("shop_phone")}
+                placeholder="77 XXX XX XX"
                 className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              NINEA <span className="text-gray-400">(optionnel)</span>
-            </label>
-            <input
-              value={form.shop_ninea}
-              onChange={update("shop_ninea")}
-              placeholder="Ex: 123456789"
-              className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Téléphone 2 <span className="text-gray-400">(opt.)</span>
+              </label>
+              <input
+                value={form.shop_phone2}
+                onChange={update("shop_phone2")}
+                placeholder="78 XXX XX XX"
+                className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Téléphone 3 <span className="text-gray-400">(opt.)</span>
+              </label>
+              <input
+                value={form.shop_phone3}
+                onChange={update("shop_phone3")}
+                placeholder="76 XXX XX XX"
+                className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                NINEA <span className="text-gray-400">(opt.)</span>
+              </label>
+              <input
+                value={form.shop_ninea}
+                onChange={update("shop_ninea")}
+                placeholder="005550539"
+                className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                RC <span className="text-gray-400">(opt.)</span>
+              </label>
+              <input
+                value={form.shop_rc}
+                onChange={update("shop_rc")}
+                placeholder="SN-DKR-2015.A.11862"
+                className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Votre nom complet</label>

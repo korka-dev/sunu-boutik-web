@@ -149,6 +149,11 @@ export interface Shop {
   name: string;
   address?: string | null;
   phone?: string | null;
+  phone2?: string | null;
+  phone3?: string | null;
+  ninea?: string | null;
+  rc?: string | null;
+  status?: string;
 }
 
 export interface User {

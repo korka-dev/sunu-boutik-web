@@ -64,7 +64,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     shop_name: string;
     shop_address?: string;
     shop_phone?: string;
+    shop_phone2?: string;
+    shop_phone3?: string;
     shop_ninea?: string;
+    shop_rc?: string;
     full_name: string;
     email: string;
     logo?: File | null;
@@ -73,7 +76,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     formData.append("shop_name", payload.shop_name);
     if (payload.shop_address) formData.append("shop_address", payload.shop_address);
     if (payload.shop_phone) formData.append("shop_phone", payload.shop_phone);
+    if (payload.shop_phone2) formData.append("shop_phone2", payload.shop_phone2);
+    if (payload.shop_phone3) formData.append("shop_phone3", payload.shop_phone3);
     if (payload.shop_ninea) formData.append("shop_ninea", payload.shop_ninea);
+    if (payload.shop_rc) formData.append("shop_rc", payload.shop_rc);
     formData.append("full_name", payload.full_name);
     formData.append("email", payload.email);
     if (payload.logo) formData.append("logo", payload.logo);
