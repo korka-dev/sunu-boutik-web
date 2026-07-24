@@ -92,6 +92,12 @@ export default function FactureDetailPage() {
             Modifier
           </button>
           <button
+            onClick={() => window.open(`/dashboard/factures/${invoiceId}/print`, "_blank")}
+            className="border border-gray-300 rounded-md px-3 sm:px-4 py-2 text-sm font-medium hover:bg-gray-50"
+          >
+            3 exemplaires
+          </button>
+          <button
             onClick={printPdf}
             disabled={!pdfBlobUrl || pdfLoading}
             className="bg-blue-600 text-white rounded-md px-3 sm:px-4 py-2 text-sm font-medium hover:bg-blue-700 disabled:opacity-50"

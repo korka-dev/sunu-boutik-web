@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import NewInvoiceModal from "@/components/NewInvoiceModal";
 import SearchBar from "@/components/SearchBar";
 import SkeletonRows from "@/components/SkeletonRows";
 import { api, ApiError, Invoice, InvoiceList } from "@/lib/api";
@@ -19,7 +18,6 @@ export default function FacturesPage() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [showModal, setShowModal] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -54,11 +52,6 @@ export default function FacturesPage() {
     setPage(1);
   }
 
-  function onCreated(invoice: Invoice) {
-    setShowModal(false);
-    router.push(`/dashboard/factures/${invoice.id}`);
-  }
-
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -76,7 +69,7 @@ export default function FacturesPage() {
             </button>
           )}
           <button
-            onClick={() => setShowModal(true)}
+            onClick={() => router.push("/dashboard/factures/new")}
             className="bg-blue-600 text-white rounded-md px-3 sm:px-4 py-2 text-sm font-medium hover:bg-blue-700"
           >
             + Nouvelle facture
@@ -154,7 +147,6 @@ export default function FacturesPage() {
         )}
       </div>
 
-      {showModal && <NewInvoiceModal onClose={() => setShowModal(false)} onCreated={onCreated} />}
     </div>
   );
 }
