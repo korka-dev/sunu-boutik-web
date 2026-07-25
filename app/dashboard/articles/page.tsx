@@ -278,7 +278,8 @@ export default function ArticlesPage() {
                 <label className="block text-xs font-medium text-gray-600 mb-1">Prix unitaire</label>
                 <input
                   type="number"
-                  step="0.01"
+                  step="1"
+                  min="0"
                   value={form.unit_price}
                   onChange={(e) => setForm({ ...form, unit_price: e.target.value })}
                   className="w-full rounded-md border border-gray-300 px-3 py-2"
@@ -288,7 +289,8 @@ export default function ArticlesPage() {
                 <label className="block text-xs font-medium text-gray-600 mb-1">Quantité en stock</label>
                 <input
                   type="number"
-                  step="0.01"
+                  step="0.1"
+                  min="0"
                   value={form.quantity}
                   onChange={(e) => setForm({ ...form, quantity: e.target.value })}
                   className="w-full rounded-md border border-gray-300 px-3 py-2"

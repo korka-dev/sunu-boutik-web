@@ -9,7 +9,7 @@ const DRAFT_KEY = "invoice_draft";
 
 interface LineItem {
   product_id: number;
-  quantity: number;
+  quantity: number | "";
   saleUnit: "unite" | "carton";
   unitPriceOverride: string;
 }
@@ -101,10 +101,15 @@ export default function NewFacturePage() {
     return products.find((p) => p.id === id);
   }
 
+  function numericQuantity(quantity: number | ""): number {
+    return quantity === "" ? 0 : quantity;
+  }
+
   function baseQuantity(line: LineItem) {
     const product = productOf(line.product_id);
     const packSize = product?.pack_size || 1;
-    return line.saleUnit === "carton" ? line.quantity * packSize : line.quantity;
+    const qty = numericQuantity(line.quantity);
+    return line.saleUnit === "carton" ? qty * packSize : qty;
   }
 
   function effectiveUnitPrice(line: LineItem) {
@@ -120,7 +125,7 @@ export default function NewFacturePage() {
   async function onSubmit() {
     setError("");
     const validLines = lines
-      .filter((l) => l.product_id && l.quantity > 0)
+      .filter((l) => l.product_id && l.quantity !== "" && l.quantity > 0)
       .map((l) => {
         const override = l.unitPriceOverride !== "" ? parseFloat(l.unitPriceOverride) : NaN;
         return {
@@ -235,16 +240,16 @@ export default function NewFacturePage() {
 
                   <input
                     type="number"
-                    step="0.01"
-                    min="0.01"
+                    step="0.1"
+                    min="1"
                     value={line.quantity}
-                    onChange={(e) => updateLine(i, { quantity: Number(e.target.value) })}
+                    onChange={(e) => updateLine(i, { quantity: e.target.value === "" ? "" : Number(e.target.value) })}
                     className="col-span-3 sm:col-span-2 rounded-md border border-gray-300 px-2 py-2 text-sm"
                     placeholder="Qté"
                   />
                   <input
                     type="number"
-                    step="0.01"
+                    step="1"
                     min="0"
                     value={line.unitPriceOverride}
                     onChange={(e) => updateLine(i, { unitPriceOverride: e.target.value })}
