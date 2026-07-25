@@ -1,24 +1,35 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import NewInvoiceModal from "@/components/NewInvoiceModal";
-import { api, ApiError, fetchPdfBlob, Invoice, PdfFormat } from "@/lib/api";
+import InvoiceCopiesView from "@/components/InvoiceCopiesView";
+import { api, ApiError, fetchPdfBlob, Client, Invoice, PdfFormat, Shop } from "@/lib/api";
+
+type ViewFormat = PdfFormat | "copies";
 
 export default function FactureDetailPage() {
   const params = useParams();
   const invoiceId = Number(params.id);
   const [invoice, setInvoice] = useState<Invoice | null>(null);
+  const [shop, setShop] = useState<Shop | null>(null);
+  const [client, setClient] = useState<Client | null>(null);
   const [error, setError] = useState("");
-  const [format, setFormat] = useState<PdfFormat>("ticket");
+  const [format, setFormat] = useState<ViewFormat>("ticket");
   const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
 
   function loadInvoice() {
-    api
-      .get<Invoice>(`/invoices/${invoiceId}`)
-      .then(setInvoice)
+    Promise.all([
+      api.get<Invoice>(`/invoices/${invoiceId}`),
+      api.get<{ user: { full_name: string }; shop: Shop | null }>("/auth/me"),
+    ])
+      .then(([inv, me]) => {
+        setInvoice(inv);
+        setShop(me.shop);
+      })
       .catch((err) => setError(err instanceof ApiError ? err.message : "Erreur de chargement"));
   }
 
@@ -42,24 +53,40 @@ export default function FactureDetailPage() {
   }, [invoiceId]);
 
   useEffect(() => {
+    if (!invoice?.client_id) {
+      setClient(null);
+      return;
+    }
+    api
+      .get<Client>(`/clients/${invoice.client_id}`)
+      .then(setClient)
+      .catch(() => setClient(null));
+  }, [invoice?.client_id]);
+
+  useEffect(() => {
+    if (format === "copies") return;
     loadPdf(format);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [invoiceId, format]);
 
-  function printPdf() {
-    if (!pdfBlobUrl) return;
-    const win = window.open(pdfBlobUrl, "_blank");
-    win?.addEventListener("load", () => win.print());
+  function handlePrint() {
+    if (format === "copies") {
+      window.print();
+    } else {
+      iframeRef.current?.contentWindow?.print();
+    }
   }
 
   function onUpdated(updated: Invoice) {
     setShowEditModal(false);
     setInvoice(updated);
-    loadPdf(format);
+    if (format !== "copies") loadPdf(format);
   }
 
   if (error) return <p className="text-sm text-red-600">{error}</p>;
-  if (!invoice) return <p className="text-gray-400">Chargement...</p>;
+  if (!invoice || !shop) return <p className="text-gray-400">Chargement...</p>;
+
+  const printDisabled = format !== "copies" && (!pdfBlobUrl || pdfLoading);
 
   return (
     <div className="space-y-4">
@@ -84,6 +111,14 @@ export default function FactureDetailPage() {
             >
               A4
             </button>
+            <button
+              onClick={() => setFormat("copies")}
+              className={`px-3 py-1.5 font-medium transition-colors border-l border-gray-300 ${
+                format === "copies" ? "bg-blue-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"
+              }`}
+            >
+              2 exemplaires
+            </button>
           </div>
           <button
             onClick={() => setShowEditModal(true)}
@@ -92,19 +127,13 @@ export default function FactureDetailPage() {
             Modifier
           </button>
           <button
-            onClick={() => window.open(`/dashboard/factures/${invoiceId}/print`, "_blank")}
-            className="border border-gray-300 rounded-md px-3 sm:px-4 py-2 text-sm font-medium hover:bg-gray-50"
-          >
-            3 exemplaires
-          </button>
-          <button
-            onClick={printPdf}
-            disabled={!pdfBlobUrl || pdfLoading}
+            onClick={handlePrint}
+            disabled={printDisabled}
             className="bg-blue-600 text-white rounded-md px-3 sm:px-4 py-2 text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
           >
             Imprimer
           </button>
-          {pdfBlobUrl && !pdfLoading && (
+          {format !== "copies" && pdfBlobUrl && !pdfLoading && (
             <a
               href={pdfBlobUrl}
               download={`facture-${invoice.number}-${format}.pdf`}
@@ -116,13 +145,16 @@ export default function FactureDetailPage() {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow overflow-hidden">
-        {pdfLoading ? (
+      <div className="bg-white rounded-xl shadow overflow-x-auto">
+        {format === "copies" ? (
+          <InvoiceCopiesView invoice={invoice} shop={shop} client={client} />
+        ) : pdfLoading ? (
           <div className="flex items-center justify-center h-48 text-gray-400 text-sm">
             Génération du PDF...
           </div>
         ) : pdfBlobUrl ? (
           <iframe
+            ref={iframeRef}
             src={pdfBlobUrl}
             className={format === "ticket" ? "w-full h-[60vh] sm:h-[600px]" : "w-full h-[70vh] sm:h-[800px]"}
             title="Facture"
