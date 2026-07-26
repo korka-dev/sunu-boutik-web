@@ -160,7 +160,7 @@ export default function InvoiceCopiesView({
   return (
     <div className="copies-preview">
       <style>{`
-        .invoice-copies, .invoice-copies * { box-sizing: border-box; margin: 0; padding: 0; }
+        .invoice-copies, .invoice-copies * { box-sizing: border-box; margin: 0; padding: 0; overflow-wrap: break-word; }
         .invoice-copies { font-family: Arial, Helvetica, sans-serif; font-size: 11px; }
 
         @media print {
@@ -168,12 +168,12 @@ export default function InvoiceCopiesView({
           .copies-preview { background: white !important; padding: 0 !important; }
         }
 
-        .copies-preview { background: #e5e7eb; padding: 16px 0; }
+        .copies-preview { background: #e5e7eb; padding: 16px 0; overflow-x: auto; }
         .invoice-copies.a4 {
-          width: 297mm; margin: 0 auto; background: white;
+          width: 100%; max-width: 297mm; margin: 0 auto; background: white;
           display: grid; grid-template-columns: 1fr 1fr;
         }
-        .invoice-copies .copy { padding: 8mm 10mm; border-right: 2px dashed #999; }
+        .invoice-copies .copy { padding: 8mm 10mm; border-right: 2px dashed #999; min-width: 0; }
         .invoice-copies .copy:last-child { border-right: none; }
 
         /* Copy label banner */
@@ -187,7 +187,7 @@ export default function InvoiceCopiesView({
         /* Header — deux colonnes (boutique / client), bordure globale, sans petits cadres */
         .invoice-copies .inv-header { border: 1.3px solid #222; margin-bottom: 8px; }
         .invoice-copies .inv-header-cols { display: grid; grid-template-columns: 1fr 1fr; }
-        .invoice-copies .inv-header-col { padding: 6px 9px; }
+        .invoice-copies .inv-header-col { padding: 6px 9px; min-width: 0; }
         .invoice-copies .inv-header-col + .inv-header-col { border-left: 1px solid #222; }
         .invoice-copies .inv-header-title {
           display: flex; align-items: center; gap: 4px;
@@ -209,7 +209,7 @@ export default function InvoiceCopiesView({
         .invoice-copies .inv-header-title .inv-icon { width: 11px; height: 11px; color: #333; }
 
         /* Table */
-        .invoice-copies table { width: 100%; border-collapse: collapse; font-size: 10px; }
+        .invoice-copies table { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 10px; }
         .invoice-copies thead tr { background: #111; color: white; }
         .invoice-copies th { padding: 4px 5px; text-align: left; font-weight: bold; border: 1px solid #555; }
         .invoice-copies th.right, .invoice-copies td.right { text-align: right; }
@@ -218,13 +218,13 @@ export default function InvoiceCopiesView({
 
         /* Footer */
         .invoice-copies .footer-totals { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; border: 1px solid #333; margin-top: 6px; }
-        .invoice-copies .ft-cell { padding: 4px 6px; border-right: 1px solid #333; font-size: 9px; }
+        .invoice-copies .ft-cell { padding: 4px 6px; border-right: 1px solid #333; font-size: 9px; min-width: 0; }
         .invoice-copies .ft-cell:last-child { border-right: none; }
         .invoice-copies .ft-label { font-weight: bold; border-bottom: 1px solid #ccc; padding-bottom: 2px; margin-bottom: 2px; text-align: center; }
         .invoice-copies .ft-value { font-size: 11px; font-weight: bold; text-align: center; }
 
         .invoice-copies .signatures { display: grid; grid-template-columns: 1fr 1fr 1fr; border: 1px solid #333; border-top: none; }
-        .invoice-copies .sig-cell { padding: 3px 6px; border-right: 1px solid #333; min-height: 36px; }
+        .invoice-copies .sig-cell { padding: 3px 6px; border-right: 1px solid #333; min-height: 36px; min-width: 0; }
         .invoice-copies .sig-cell:last-child { border-right: none; }
         .invoice-copies .sig-label { font-size: 8px; font-weight: bold; text-align: center; border-bottom: 1px solid #ddd; padding-bottom: 2px; margin-bottom: 4px; }
 
