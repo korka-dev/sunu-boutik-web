@@ -95,7 +95,7 @@ export default function FactureDetailPage() {
             onClick={() => window.open(`/dashboard/factures/${invoiceId}/print`, "_blank")}
             className="border border-gray-300 rounded-md px-3 sm:px-4 py-2 text-sm font-medium hover:bg-gray-50"
           >
-            3 exemplaires
+            2 exemplaires
           </button>
           <button
             onClick={printPdf}

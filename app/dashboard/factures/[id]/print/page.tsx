@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { api, ApiError, Invoice, Shop } from "@/lib/api";
+import { api, ApiError, Client, Invoice, Shop } from "@/lib/api";
 
 function numberToWords(n: number): string {
   const units = ["", "un", "deux", "trois", "quatre", "cinq", "six", "sept", "huit", "neuf",
@@ -33,6 +33,7 @@ export default function PrintFacturePage() {
   const invoiceId = Number(params.id);
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [shop, setShop] = useState<Shop | null>(null);
+  const [client, setClient] = useState<Client | null>(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -40,7 +41,13 @@ export default function PrintFacturePage() {
       api.get<Invoice>(`/invoices/${invoiceId}`),
       api.get<{ user: { full_name: string }; shop: Shop | null }>("/auth/me"),
     ])
-      .then(([inv, me]) => { setInvoice(inv); setShop(me.shop); })
+      .then(([inv, me]) => {
+        setInvoice(inv);
+        setShop(me.shop);
+        if (inv.client_id) {
+          api.get<Client>(`/clients/${inv.client_id}`).then(setClient).catch(() => {});
+        }
+      })
       .catch((err) => setError(err instanceof ApiError ? err.message : "Erreur"));
   }, [invoiceId]);
 
@@ -50,7 +57,9 @@ export default function PrintFacturePage() {
   const dateObj = new Date(invoice.created_at);
   const dateStr = dateObj.toLocaleDateString("fr-FR");
   const heureStr = dateObj.toLocaleTimeString("fr-FR");
-  const clientLabel = invoice.client_name || "";
+  const clientLabel = client?.name || invoice.client_name || "";
+  const clientPhone = client?.phone || "";
+  const clientAddress = client?.address || "";
   const totalQty = invoice.lines.reduce((s, l) => s + l.quantity, 0);
   const phones = [shop.phone, shop.phone2, shop.phone3].filter(Boolean).join(" - ");
   const amountWords = numberToWords(Math.round(invoice.total)) + " francs CFA";
@@ -64,10 +73,12 @@ export default function PrintFacturePage() {
           body { background: white; }
           .no-print { display: none !important; }
           .page-break { page-break-before: always; }
+          @page { size: A4 landscape; margin: 8mm; }
+          .a4 { width: 100%; }
         }
-        .a4 { width: 210mm; margin: 0 auto; background: white; }
-        .copy { padding: 8mm 10mm; border-bottom: 2px dashed #999; }
-        .copy:last-child { border-bottom: none; }
+        .a4 { width: 297mm; margin: 0 auto; background: white; display: flex; }
+        .copy { flex: 0 0 50%; width: 50%; padding: 8mm 10mm; border-right: 2px dashed #999; }
+        .copy:last-child { border-right: none; }
 
         /* Copy label banner */
         .copy-banner {
@@ -78,23 +89,24 @@ export default function PrintFacturePage() {
         }
 
         /* Header */
-        .header { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 8px; border: 1px solid #333; }
-        .header-left { padding: 6px 8px; border-right: 1px solid #333; }
-        .header-right { padding: 6px 8px; }
-        .shop-name { font-size: 13px; font-weight: bold; text-transform: uppercase; line-height: 1.2; }
-        .shop-sub { font-size: 9px; color: #444; margin-bottom: 4px; }
-        .shop-meta { font-size: 9px; line-height: 1.6; }
-        .phones { font-size: 9px; font-weight: bold; margin-top: 2px; }
-        .inv-row { display: flex; gap: 6px; font-size: 10px; margin-bottom: 3px; }
-        .inv-label { font-weight: bold; min-width: 50px; }
-        .inv-box { border: 1px solid #333; padding: 2px 4px; flex: 1; min-height: 18px; font-size: 10px; font-weight: bold; }
+        .header { display: grid; grid-template-columns: 1.1fr 1fr; margin-bottom: 8px; border: 1px solid #333; }
+        .header-left { padding: 8px 10px; border-right: 1px solid #333; display: flex; flex-direction: column; justify-content: center; gap: 2px; }
+        .header-right { padding: 8px 10px; display: flex; flex-direction: column; justify-content: center; }
+        .shop-name { font-size: 14px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.3px; line-height: 1.2; }
+        .shop-sub { font-size: 9px; color: #555; }
+        .shop-meta { font-size: 9px; color: #555; }
+        .phones { font-size: 9.5px; font-weight: bold; margin-top: 2px; }
+        .info-line { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 2.5px 0; border-bottom: 1px dotted #ccc; }
+        .info-line:last-child { border-bottom: none; }
+        .info-label { font-size: 8.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; color: #666; white-space: nowrap; }
+        .info-value { font-size: 11px; font-weight: bold; text-align: right; }
 
         /* Table */
-        table { width: 100%; border-collapse: collapse; font-size: 10px; }
+        table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
         thead tr { background: #111; color: white; }
-        th { padding: 4px 5px; text-align: left; font-weight: bold; border: 1px solid #555; }
+        th { padding: 6px 7px; text-align: left; font-weight: bold; border: 1px solid #555; font-size: 10.5px; }
         th.right, td.right { text-align: right; }
-        td { padding: 3px 5px; border: 1px solid #ddd; vertical-align: top; }
+        td { padding: 6px 7px; border: 1px solid #ddd; vertical-align: middle; line-height: 1.35; }
         tr:nth-child(even) td { background: #f9f9f9; }
 
         /* Footer */
@@ -144,20 +156,30 @@ export default function PrintFacturePage() {
                 {phones && <div className="phones">{phones}</div>}
               </div>
               <div className="header-right">
-                <div className="inv-row">
-                  <span className="inv-label">DATE :</span>
-                  <span className="inv-box">{dateStr}</span>
-                  <span className="inv-label" style={{ minWidth: 40 }}>HEURE</span>
-                  <span className="inv-box">{heureStr}</span>
+                <div className="info-line">
+                  <span className="info-label">Date</span>
+                  <span className="info-value">{dateStr} à {heureStr}</span>
                 </div>
-                <div className="inv-row">
-                  <span className="inv-label">N° Facture :</span>
-                  <span className="inv-box">{invoice.number}</span>
+                <div className="info-line">
+                  <span className="info-label">N° Facture</span>
+                  <span className="info-value">{invoice.number}</span>
                 </div>
-                <div className="inv-row">
-                  <span className="inv-label">Client :</span>
-                  <span className="inv-box">{clientLabel}</span>
+                <div className="info-line">
+                  <span className="info-label">Client</span>
+                  <span className="info-value">{clientLabel}</span>
                 </div>
+                {clientPhone && (
+                  <div className="info-line">
+                    <span className="info-label">Téléphone</span>
+                    <span className="info-value">{clientPhone}</span>
+                  </div>
+                )}
+                {clientAddress && (
+                  <div className="info-line">
+                    <span className="info-label">Adresse</span>
+                    <span className="info-value">{clientAddress}</span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -215,8 +237,8 @@ export default function PrintFacturePage() {
               Arrêtée la présente facture à la somme de : <em>{amountWords}</em>
             </div>
             <div className="bottom-ref">
-              <span>{invoice.number}</span>
-              <span style={{ fontWeight: "bold", letterSpacing: "1px" }}>FACTURE COMPTANT</span>
+              <span>SUNU BOUTIK</span>
+              
             </div>
           </div>
         ))}
