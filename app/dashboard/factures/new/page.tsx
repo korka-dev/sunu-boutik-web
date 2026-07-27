@@ -4,6 +4,9 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import SearchSelect from "@/components/SearchSelect";
 import { api, ApiError, Client, ClientList, Invoice, Product, ProductList } from "@/lib/api";
+import { createInvoiceOffline, getProductsOffline, getClientsOffline } from "@/lib/offline-store";
+import { useAuth } from "@/lib/auth-context";
+import { db } from "@/lib/db";
 
 const DRAFT_KEY = "invoice_draft";
 
@@ -33,6 +36,7 @@ function loadDraft(): Draft | null {
 
 export default function NewFacturePage() {
   const router = useRouter();
+  const { shop } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [clientId, setClientId] = useState<number | "">("");
@@ -43,12 +47,37 @@ export default function NewFacturePage() {
   const [draftRestored, setDraftRestored] = useState(false);
 
   useEffect(() => {
-    Promise.all([
-      api.get<ProductList>("/products?page_size=200"),
-      api.get<ClientList>("/clients?page_size=200"),
-    ]).then(([p, c]) => {
-      setProducts(p.items);
-      setClients(c.items);
+    async function loadData() {
+      const shopId = shop?.id;
+
+      // Essayer d'abord les données locales (disponible hors connexion)
+      if (shopId) {
+        const [localProds, localClients] = await Promise.all([
+          getProductsOffline(shopId),
+          getClientsOffline(shopId),
+        ]);
+        if (localProds.length > 0) {
+          setProducts(localProds.map((p) => ({ ...p, id: p.serverId ?? p.localId! })));
+        }
+        if (localClients.length > 0) {
+          setClients(localClients.map((c) => ({ ...c, id: c.serverId ?? c.localId!, created_at: c.created_at })));
+        }
+      }
+
+      // Si en ligne, rafraîchir depuis le serveur
+      if (navigator.onLine) {
+        try {
+          const [p, c] = await Promise.all([
+            api.get<ProductList>("/products?page_size=200"),
+            api.get<ClientList>("/clients?page_size=200"),
+          ]);
+          setProducts(p.items);
+          setClients(c.items);
+        } catch {
+          // On garde les données locales
+        }
+      }
+
       const draft = loadDraft();
       if (draft) {
         setClientId(draft.clientId);
@@ -56,8 +85,10 @@ export default function NewFacturePage() {
         setLines(draft.lines.length > 0 ? draft.lines : [defaultLine()]);
         setDraftRestored(true);
       }
-    });
-  }, []);
+    }
+    loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shop?.id]);
 
   const saveDraft = useCallback((cId: number | "", cName: string, ls: LineItem[]) => {
     localStorage.setItem(DRAFT_KEY, JSON.stringify({ clientId: cId, clientName: cName, lines: ls }));
@@ -140,14 +171,34 @@ export default function NewFacturePage() {
     }
     setSubmitting(true);
     try {
-      const result = await api.post<Invoice>("/invoices", {
-        client_id: clientId || null,
-        client_name: clientId ? null : clientName.trim() || null,
-        note: null,
-        lines: validLines,
-      });
-      localStorage.removeItem(DRAFT_KEY);
-      router.push(`/dashboard/factures/${result.id}`);
+      if (navigator.onLine) {
+        // Mode en ligne : appel direct au serveur
+        const result = await api.post<Invoice>("/invoices", {
+          client_id: clientId || null,
+          client_name: clientId ? null : clientName.trim() || null,
+          note: null,
+          lines: validLines,
+        });
+        localStorage.removeItem(DRAFT_KEY);
+        router.push(`/dashboard/factures/${result.id}`);
+      } else {
+        // Mode hors connexion : sauvegarde locale
+        const localProds = shop?.id ? await getProductsOffline(shop.id) : [];
+        const allProds = localProds.map((p) => ({ ...p, id: p.serverId ?? p.localId! }));
+        const inv = await createInvoiceOffline(
+          {
+            client_id: clientId || null,
+            client_name: clientId ? null : clientName.trim() || null,
+            note: null,
+            lines: validLines,
+          },
+          shop!.id,
+          localProds
+        );
+        localStorage.removeItem(DRAFT_KEY);
+        // Rediriger vers une page de confirmation hors connexion
+        router.push(`/dashboard/factures/offline/${inv.localId}`);
+      }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Erreur lors de la création de la facture");
       setSubmitting(false);

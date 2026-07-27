@@ -16,6 +16,10 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Sunu Boutik",
   description: "Gestion des marchandises et facturation pour boutiquiers",
+  manifest: "/manifest.json",
+  themeColor: "#2563eb",
+  appleWebApp: { capable: true, statusBarStyle: "default", title: "Sunu Boutik" },
+  viewport: { width: "device-width", initialScale: 1, maximumScale: 1 },
 };
 
 export default function RootLayout({
