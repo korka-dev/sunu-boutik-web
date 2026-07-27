@@ -11,6 +11,16 @@ export default function Home() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const [showAppModal, setShowAppModal] = useState(false);
+  const [installPrompt, setInstallPrompt] = useState<Event | null>(null);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+    };
+    window.addEventListener("beforeinstallprompt", handler);
+    return () => window.removeEventListener("beforeinstallprompt", handler);
+  }, []);
 
   useEffect(() => {
     if (loading) return;
@@ -62,7 +72,17 @@ export default function Home() {
             </Link>
             <button
               type="button"
-              onClick={() => setShowAppModal(true)}
+              onClick={async () => {
+                if (installPrompt) {
+                  // Desktop : déclencher l'installation PWA
+                  (installPrompt as any).prompt();
+                  const { outcome } = await (installPrompt as any).userChoice;
+                  if (outcome === "accepted") setInstallPrompt(null);
+                } else {
+                  // Mobile ou PWA non disponible : afficher le modal
+                  setShowAppModal(true);
+                }
+              }}
               className="w-full sm:w-auto bg-white border border-gray-300 rounded-md px-6 py-3 font-medium text-gray-700 hover:bg-gray-50"
             >
               Télécharger l&apos;app
@@ -101,11 +121,20 @@ export default function Home() {
       </footer>
 
       {showAppModal && (
-        <Modal title="Application mobile" onClose={() => setShowAppModal(false)}>
-          <p className="text-sm text-gray-600">
-            L&apos;application sera disponible bientôt. En attendant, vous pouvez utiliser Sunu Boutik
-            directement depuis votre navigateur, y compris sur smartphone.
-          </p>
+        <Modal title="Installer l'application" onClose={() => setShowAppModal(false)}>
+          <div className="space-y-4 text-sm text-gray-600">
+            <p>Installez Sunu Boutik sur votre téléphone pour y accéder comme une vraie application, même sans connexion.</p>
+            <div className="space-y-3">
+              <div className="bg-gray-50 rounded-lg p-3">
+                <p className="font-semibold text-gray-800 mb-1">📱 Sur Android (Chrome)</p>
+                <p>Menu ⋮ → <strong>Ajouter à l&apos;écran d&apos;accueil</strong></p>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-3">
+                <p className="font-semibold text-gray-800 mb-1">🍎 Sur iPhone (Safari)</p>
+                <p>Bouton Partager <strong>⬆</strong> → <strong>Sur l&apos;écran d&apos;accueil</strong></p>
+              </div>
+            </div>
+          </div>
         </Modal>
       )}
     </div>
