@@ -167,8 +167,13 @@ export default function FacturesPage() {
                   {new Date(inv.created_at).toLocaleString("fr-FR")}
                 </td>
                 <td className="px-4 py-3 text-right">{inv.total.toLocaleString()} FCFA</td>
-                <td className="px-4 py-3 text-right">
-                  <span className="text-blue-600 hover:underline">Voir / Modifier</span>
+                <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    onClick={() => router.push(`/dashboard/factures/${inv.id}/edit`)}
+                    className="text-blue-600 hover:underline"
+                  >
+                    Modifier
+                  </button>
                 </td>
               </tr>
             ))}

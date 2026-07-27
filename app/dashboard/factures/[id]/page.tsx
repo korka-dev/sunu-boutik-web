@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useParams } from "next/navigation";
-import NewInvoiceModal from "@/components/NewInvoiceModal";
+import { useParams, useRouter } from "next/navigation";
 import InvoiceCopiesView from "@/components/InvoiceCopiesView";
 import { api, ApiError, fetchPdfBlob, Client, Invoice, PdfFormat, Shop } from "@/lib/api";
 
@@ -10,6 +9,7 @@ type ViewFormat = PdfFormat | "copies";
 
 export default function FactureDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const invoiceId = Number(params.id);
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [shop, setShop] = useState<Shop | null>(null);
@@ -18,7 +18,6 @@ export default function FactureDetailPage() {
   const [format, setFormat] = useState<ViewFormat>("ticket");
   const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   function loadInvoice() {
@@ -77,12 +76,6 @@ export default function FactureDetailPage() {
     }
   }
 
-  function onUpdated(updated: Invoice) {
-    setShowEditModal(false);
-    setInvoice(updated);
-    if (format !== "copies") loadPdf(format);
-  }
-
   if (error) return <p className="text-sm text-red-600">{error}</p>;
   if (!invoice || !shop) return <p className="text-gray-400">Chargement...</p>;
 
@@ -121,7 +114,7 @@ export default function FactureDetailPage() {
             </button>
           </div>
           <button
-            onClick={() => setShowEditModal(true)}
+            onClick={() => router.push(`/dashboard/factures/${invoiceId}/edit`)}
             className="border border-gray-300 rounded-md px-3 sm:px-4 py-2 text-sm font-medium hover:bg-gray-50"
           >
             Modifier
@@ -163,10 +156,6 @@ export default function FactureDetailPage() {
           <p className="p-6 text-gray-400">Génération du PDF...</p>
         )}
       </div>
-
-      {showEditModal && (
-        <NewInvoiceModal invoice={invoice} onClose={() => setShowEditModal(false)} onCreated={onUpdated} />
-      )}
     </div>
   );
 }

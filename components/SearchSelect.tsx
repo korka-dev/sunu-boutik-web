@@ -21,8 +21,8 @@ export default function SearchSelect({
   onFreeTextChange,
 }: {
   options: Option[];
-  value: number | "";
-  onChange: (id: number | "") => void;
+  value?: number | "";
+  onChange?: (id: number | "") => void;
   placeholder?: string;
   allowEmpty?: boolean;
   emptyLabel?: string;
@@ -68,7 +68,7 @@ export default function SearchSelect({
         onChange={(e) => {
           setQuery(e.target.value);
           setOpen(true);
-          if (value !== "") onChange("");
+          if (onChange && value !== "") onChange("");
           if (allowFreeText) onFreeTextChange?.(e.target.value);
         }}
         onFocus={() => setOpen(true)}
@@ -81,7 +81,7 @@ export default function SearchSelect({
             <button
               type="button"
               onMouseDown={() => {
-                onChange("");
+                onChange?.("");
                 setQuery("");
                 setOpen(false);
               }}
@@ -96,10 +96,14 @@ export default function SearchSelect({
               key={o.id}
               type="button"
               onMouseDown={() => {
-                onChange(o.id);
+                if (onChange) {
+                  onChange(o.id);
+                  if (allowFreeText) onFreeTextChange?.("");
+                } else if (allowFreeText) {
+                  onFreeTextChange?.(o.label);
+                }
                 setQuery(o.label);
                 setOpen(false);
-                if (allowFreeText) onFreeTextChange?.("");
               }}
               className="block w-full text-left px-3 py-2 text-sm hover:bg-blue-50"
             >
