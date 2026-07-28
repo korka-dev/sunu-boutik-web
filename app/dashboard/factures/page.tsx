@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import SearchBar from "@/components/SearchBar";
 import SkeletonRows from "@/components/SkeletonRows";
+import InvoiceStatusBadge, { STATUS_LABELS } from "@/components/InvoiceStatusBadge";
 import { api, ApiError, Invoice, InvoiceList, getToken } from "@/lib/api";
 
 const PAGE_SIZE = 20;
@@ -25,6 +26,7 @@ export default function FacturesPage() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [date, setDate] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -41,6 +43,7 @@ export default function FacturesPage() {
       const params = new URLSearchParams({ page: String(page), page_size: String(PAGE_SIZE) });
       if (search) params.set("search", search);
       if (date) params.set("date", date);
+      if (statusFilter) params.set("status_filter", statusFilter);
       const list = await api.get<InvoiceList>(`/invoices?${params.toString()}`);
       setInvoices(list.items);
       setTotalPages(list.total_pages);
@@ -55,7 +58,7 @@ export default function FacturesPage() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, search, date]);
+  }, [page, search, date, statusFilter]);
 
   function onSearchChange(value: string) {
     setSearch(value);
@@ -64,6 +67,11 @@ export default function FacturesPage() {
 
   function onDateChange(value: string) {
     setDate(value);
+    setPage(1);
+  }
+
+  function onStatusFilterChange(value: string) {
+    setStatusFilter(value);
     setPage(1);
   }
 
@@ -111,6 +119,16 @@ export default function FacturesPage() {
               Effacer
             </button>
           )}
+          <select
+            value={statusFilter}
+            onChange={(e) => onStatusFilterChange(e.target.value)}
+            className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">Tous les statuts</option>
+            {Object.entries(STATUS_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>{label}</option>
+            ))}
+          </select>
           <button
             onClick={() => setShowExportModal(true)}
             className="flex items-center gap-1.5 border border-green-600 text-green-700 rounded-md px-3 py-2 text-sm font-medium hover:bg-green-50"
@@ -145,15 +163,16 @@ export default function FacturesPage() {
             <tr>
               <th className="px-4 py-3">Numéro</th>
               <th className="px-4 py-3">Date</th>
+              <th className="px-4 py-3">Statut</th>
               <th className="px-4 py-3 text-right">Total</th>
               <th className="px-4 py-3 text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {loading && <SkeletonRows cols={4} />}
+            {loading && <SkeletonRows cols={5} />}
             {!loading && invoices.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-4 py-6 text-center text-gray-400">Aucune facture</td>
+                <td colSpan={5} className="px-4 py-6 text-center text-gray-400">Aucune facture</td>
               </tr>
             )}
             {invoices.map((inv) => (
@@ -165,6 +184,9 @@ export default function FacturesPage() {
                 <td className="px-4 py-3 font-medium">{inv.number}</td>
                 <td className="px-4 py-3 text-gray-500">
                   {new Date(inv.created_at).toLocaleString("fr-FR")}
+                </td>
+                <td className="px-4 py-3">
+                  <InvoiceStatusBadge status={inv.status} />
                 </td>
                 <td className="px-4 py-3 text-right">{inv.total.toLocaleString()} FCFA</td>
                 <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>

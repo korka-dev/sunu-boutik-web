@@ -64,6 +64,16 @@ export function IconUser({ className = "w-[18px] h-[18px]" }: { className?: stri
   );
 }
 
+export function IconCash({ className = "w-[18px] h-[18px]" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className}>
+      <rect x="2.5" y="6" width="19" height="12" rx="2" />
+      <circle cx="12" cy="12" r="2.8" />
+      <path d="M5.5 9v.01M18.5 15v.01" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function IconInbox({ className = "w-[18px] h-[18px]" }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className}>
