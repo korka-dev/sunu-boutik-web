@@ -172,9 +172,19 @@ export default function InvoiceCopiesView({
         .invoice-copies.a4 {
           width: 100%; max-width: 297mm; margin: 0 auto; background: white;
           display: grid; grid-template-columns: 1fr 1fr;
+          height: 210mm;
         }
-        .invoice-copies .copy { padding: 8mm 10mm; border-right: 2px dashed #999; min-width: 0; }
+        @media print {
+          .invoice-copies.a4 { height: calc(210mm - 16mm); }
+        }
+        .invoice-copies .copy {
+          display: flex; flex-direction: column;
+          height: 100%; padding: 8mm 10mm; border-right: 2px dashed #999; min-width: 0;
+        }
         .invoice-copies .copy:last-child { border-right: none; }
+        .invoice-copies .items-wrap { flex: 0 1 auto; min-height: 0; }
+        .invoice-copies .copy-summary { flex: 0 0 auto; }
+        .invoice-copies .copy-signoff { flex: 0 0 auto; margin-top: auto; }
 
         /* Copy label banner */
         .invoice-copies .copy-banner {
@@ -251,65 +261,70 @@ export default function InvoiceCopiesView({
               heureStr={heureStr}
             />
 
-            {/* Table */}
-            <table>
-              <thead>
-                <tr>
-                  <th style={{ width: "8%" }}>Qté</th>
-                  <th style={{ width: "52%" }}>Désignation</th>
-                  <th className="right" style={{ width: "20%" }}>Px unitaire</th>
-                  <th className="right" style={{ width: "20%" }}>Montant TTC</th>
-                </tr>
-              </thead>
-              <tbody>
-                {invoice.lines.map((line, i) => (
-                  <tr key={i}>
-                    <td className="right">{line.quantity % 1 === 0 ? Math.floor(line.quantity) : line.quantity}</td>
-                    <td>{line.product_name}</td>
-                    <td className="right">{line.unit_price.toLocaleString("fr-FR")}</td>
-                    <td className="right">{line.line_total.toLocaleString("fr-FR")}</td>
+            {/* Table — occupe l'espace disponible entre l'en-tête et le pied de facture */}
+            <div className="items-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th style={{ width: "8%" }}>Qté</th>
+                    <th style={{ width: "52%" }}>Désignation</th>
+                    <th className="right" style={{ width: "20%" }}>Px unitaire</th>
+                    <th className="right" style={{ width: "20%" }}>Montant TTC</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-
-            {/* Totaux */}
-            <div className="footer-totals">
-              <div className="ft-cell">
-                <div className="ft-label">Total Articles</div>
-                <div className="ft-value">{totalQty % 1 === 0 ? Math.floor(totalQty) : totalQty}</div>
-              </div>
-              <div className="ft-cell">
-                <div className="ft-label">TOTAL</div>
-                <div className="ft-value">{invoice.total.toLocaleString("fr-FR")}</div>
-              </div>
-              <div className="ft-cell">
-                <div className="ft-label">ACOMPTE</div>
-                <div className="ft-value">0</div>
-              </div>
-              <div className="ft-cell">
-                <div className="ft-label">NET À PAYER</div>
-                <div className="ft-value">{invoice.total.toLocaleString("fr-FR")}</div>
-              </div>
+                </thead>
+                <tbody>
+                  {invoice.lines.map((line, i) => (
+                    <tr key={i}>
+                      <td className="right">{line.quantity % 1 === 0 ? Math.floor(line.quantity) : line.quantity}</td>
+                      <td>{line.product_name}</td>
+                      <td className="right">{line.unit_price.toLocaleString("fr-FR")}</td>
+                      <td className="right">{line.line_total.toLocaleString("fr-FR")}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
 
-            {/* Signatures */}
-            <div className="signatures">
-              <div className="sig-cell"><div className="sig-label">VISA RESPONSABLE DÉPÔT</div></div>
-              <div className="sig-cell"><div className="sig-label">VISA LIVREUR</div></div>
-              <div className="sig-cell"><div className="sig-label">VISA CAISSIER</div></div>
+            {/* Totaux, signatures et mention légale — juste sous le tableau */}
+            <div className="copy-summary">
+              <div className="footer-totals">
+                <div className="ft-cell">
+                  <div className="ft-label">Total Articles</div>
+                  <div className="ft-value">{totalQty % 1 === 0 ? Math.floor(totalQty) : totalQty}</div>
+                </div>
+                <div className="ft-cell">
+                  <div className="ft-label">TOTAL</div>
+                  <div className="ft-value">{invoice.total.toLocaleString("fr-FR")}</div>
+                </div>
+                <div className="ft-cell">
+                  <div className="ft-label">ACOMPTE</div>
+                  <div className="ft-value">0</div>
+                </div>
+                <div className="ft-cell">
+                  <div className="ft-label">NET À PAYER</div>
+                  <div className="ft-value">{invoice.total.toLocaleString("fr-FR")}</div>
+                </div>
+              </div>
+
+              <div className="signatures">
+                <div className="sig-cell"><div className="sig-label">VISA RESPONSABLE DÉPÔT</div></div>
+                <div className="sig-cell"><div className="sig-label">VISA LIVREUR</div></div>
+                <div className="sig-cell"><div className="sig-label">VISA CAISSIER</div></div>
+              </div>
+
+              <div className="bottom-text">
+                Arrêtée la présente facture à la somme de : <em>{amountWords}</em>
+              </div>
             </div>
 
-            {/* Bas de page */}
-            <div className="bottom-text">
-              Arrêtée la présente facture à la somme de : <em>{amountWords}</em>
-            </div>
-            
-            <div className="bottom-text">
-              <em>Merci pour votre confiance !</em>
-            </div>
-            <div className="bottom-text" style={{ textAlign: "center", marginTop: "4px" }}>
-              <em>www.sunu-boutik.com</em>
+            {/* Pied de page réel — toujours collé au bas de la demi-page */}
+            <div className="copy-signoff">
+              <div className="bottom-text">
+                <em>Merci pour votre confiance !</em>
+              </div>
+              <div className="bottom-text" style={{ textAlign: "center", marginTop: "4px" }}>
+                <em>www.sunu-boutik.com</em>
+              </div>
             </div>
           </div>
         ))}

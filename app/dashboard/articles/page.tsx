@@ -14,6 +14,7 @@ const PAGE_SIZE = 10;
 export default function ArticlesPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [totalPages, setTotalPages] = useState(1);
@@ -75,6 +76,17 @@ export default function ArticlesPage() {
       .get<CategoryList>("/categories?page_size=100")
       .then((list) => setCategories(list.items))
       .catch(() => {});
+  }, []);
+
+  function loadAllProducts() {
+    api
+      .get<ProductList>("/products?page_size=200")
+      .then((list) => setAllProducts(list.items))
+      .catch(() => {});
+  }
+
+  useEffect(() => {
+    loadAllProducts();
   }, []);
 
   function openCreate() {
@@ -140,6 +152,7 @@ export default function ArticlesPage() {
       }
       closeModal();
       await load();
+      loadAllProducts();
     } catch (err) {
       setFormError(err instanceof ApiError ? err.message : "Erreur lors de l'enregistrement");
     } finally {
@@ -251,10 +264,14 @@ export default function ArticlesPage() {
           <form onSubmit={onSubmit} className="space-y-4">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Nom</label>
-              <input
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="w-full rounded-md border border-gray-300 px-3 py-2"
+              <SearchSelect
+                options={allProducts
+                  .filter((p) => p.id !== editingId)
+                  .map((p) => ({ id: p.id, label: p.name }))}
+                allowFreeText
+                freeTextValue={form.name}
+                onFreeTextChange={(text) => setForm((f) => ({ ...f, name: text }))}
+                placeholder="Nom de l'article"
               />
             </div>
             <div>

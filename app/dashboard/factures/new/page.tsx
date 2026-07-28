@@ -1,12 +1,11 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import SearchSelect from "@/components/SearchSelect";
 import { api, ApiError, Client, ClientList, Invoice, Product, ProductList } from "@/lib/api";
 import { createInvoiceOffline, getProductsOffline, getClientsOffline } from "@/lib/offline-store";
 import { useAuth } from "@/lib/auth-context";
-import { db } from "@/lib/db";
 
 const DRAFT_KEY = "invoice_draft";
 
@@ -50,7 +49,6 @@ export default function NewFacturePage() {
     async function loadData() {
       const shopId = shop?.id;
 
-      // Essayer d'abord les données locales (disponible hors connexion)
       if (shopId) {
         const [localProds, localClients] = await Promise.all([
           getProductsOffline(shopId),
@@ -64,7 +62,6 @@ export default function NewFacturePage() {
         }
       }
 
-      // Si en ligne, rafraîchir depuis le serveur
       if (navigator.onLine) {
         try {
           const [p, c] = await Promise.all([
@@ -172,7 +169,6 @@ export default function NewFacturePage() {
     setSubmitting(true);
     try {
       if (navigator.onLine) {
-        // Mode en ligne : appel direct au serveur
         const result = await api.post<Invoice>("/invoices", {
           client_id: clientId || null,
           client_name: clientId ? null : clientName.trim() || null,
@@ -182,9 +178,7 @@ export default function NewFacturePage() {
         localStorage.removeItem(DRAFT_KEY);
         router.push(`/dashboard/factures/${result.id}`);
       } else {
-        // Mode hors connexion : sauvegarde locale
         const localProds = shop?.id ? await getProductsOffline(shop.id) : [];
-        const allProds = localProds.map((p) => ({ ...p, id: p.serverId ?? p.localId! }));
         const inv = await createInvoiceOffline(
           {
             client_id: clientId || null,
@@ -196,7 +190,6 @@ export default function NewFacturePage() {
           localProds
         );
         localStorage.removeItem(DRAFT_KEY);
-        // Rediriger vers une page de confirmation hors connexion
         router.push(`/dashboard/factures/offline/${inv.localId}`);
       }
     } catch (err) {
