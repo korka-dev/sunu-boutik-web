@@ -225,12 +225,17 @@ export interface InvoiceLine {
   line_total: number;
 }
 
+export type InvoiceStatus = "unpaid" | "partial" | "paid";
+
 export interface Invoice {
   id: number;
   number: string;
   client_id?: number | null;
   client_name?: string | null;
   total: number;
+  amount_paid: number;
+  balance_due: number;
+  status: InvoiceStatus;
   note?: string | null;
   created_at: string;
   lines: InvoiceLine[];
@@ -238,6 +243,45 @@ export interface Invoice {
 
 export interface InvoiceList {
   items: Invoice[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+
+export interface Payment {
+  id: number;
+  invoice_id: number;
+  amount: number;
+  amount_received?: number | null;
+  change?: number | null;
+  note?: string | null;
+  created_by_id?: number | null;
+  created_at: string;
+  voided_at?: string | null;
+  void_reason?: string | null;
+  is_voided: boolean;
+}
+
+export interface CaisseSummary {
+  date: string;
+  invoices_count: number;
+  total_invoiced: number;
+  total_collected: number;
+  remaining: number;
+}
+
+export interface CaisseEntry {
+  id: number;
+  invoice_id: number;
+  invoice_number: string;
+  client_name: string;
+  amount: number;
+  created_at: string;
+}
+
+export interface CaisseJournal {
+  items: CaisseEntry[];
   total: number;
   page: number;
   page_size: number;

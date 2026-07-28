@@ -6,13 +6,14 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { OfflineProvider } from "@/lib/offline-context";
 import OfflineIndicator from "@/components/OfflineIndicator";
-import { IconBox, IconReceipt, IconTag, IconUsers, IconUser } from "@/components/Icons";
+import { IconBox, IconCash, IconReceipt, IconTag, IconUsers, IconUser } from "@/components/Icons";
 
 const navItems = [
   { href: "/dashboard/categories", label: "Catégories", Icon: IconTag },
   { href: "/dashboard/articles", label: "Articles", Icon: IconBox },
   { href: "/dashboard/clients", label: "Clients", Icon: IconUsers },
   { href: "/dashboard/factures", label: "Factures", Icon: IconReceipt },
+  { href: "/dashboard/caisse", label: "Caisse", Icon: IconCash },
   { href: "/dashboard/profil", label: "Profil", Icon: IconUser },
 ];
 
