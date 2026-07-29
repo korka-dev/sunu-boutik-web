@@ -129,6 +129,40 @@ export const adminApi = {
     request<T>(path, { method: "POST", body: body ? JSON.stringify(body) : undefined }, getAdminToken),
 };
 
+export interface PaginatedList<T> {
+  items: T[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+
+// L'API plafonne toujours page_size à 100, quelle que soit la valeur demandée
+// (voir sunu-boutik-api/app/routers/*.py). Toute liste susceptible de dépasser
+// 100 éléments doit donc être parcourue page par page plutôt que récupérée en
+// un seul appel avec un page_size arbitrairement grand.
+const FETCH_ALL_PAGE_SIZE = 100;
+
+export async function fetchAllPages<T>(
+  path: string,
+  getter: (path: string) => Promise<PaginatedList<T>>
+): Promise<T[]> {
+  const sep = path.includes("?") ? "&" : "?";
+  const pageUrl = (page: number) => `${path}${sep}page=${page}&page_size=${FETCH_ALL_PAGE_SIZE}`;
+
+  const first = await getter(pageUrl(1));
+  const items = [...first.items];
+
+  if (first.total_pages > 1) {
+    const rest = await Promise.all(
+      Array.from({ length: first.total_pages - 1 }, (_, i) => getter(pageUrl(i + 2)))
+    );
+    for (const page of rest) items.push(...page.items);
+  }
+
+  return items;
+}
+
 export type PdfFormat = "ticket" | "a4";
 
 export function pdfUrl(invoiceId: number, format: PdfFormat = "ticket"): string {

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import SearchSelect from "@/components/SearchSelect";
-import { api, ApiError, Client, ClientList, Invoice, Product, ProductList } from "@/lib/api";
+import { api, ApiError, Client, ClientList, fetchAllPages, Invoice, Product, ProductList } from "@/lib/api";
 
 const DRAFT_KEY = "invoice_draft";
 
@@ -60,11 +60,11 @@ export default function InvoiceForm({
 
   useEffect(() => {
     Promise.all([
-      api.get<ProductList>("/products?page_size=200"),
-      api.get<ClientList>("/clients?page_size=200"),
+      fetchAllPages<Product>("/products", api.get<ProductList>),
+      fetchAllPages<Client>("/clients", api.get<ClientList>),
     ]).then(([p, c]) => {
-      setProducts(p.items);
-      setClients(c.items);
+      setProducts(p);
+      setClients(c);
       if (isEdit) return;
       const draft = loadDraft();
       if (draft) {

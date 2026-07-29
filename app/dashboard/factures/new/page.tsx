@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import SearchSelect from "@/components/SearchSelect";
-import { api, ApiError, Client, ClientList, Invoice, Product, ProductList } from "@/lib/api";
+import { api, ApiError, Client, ClientList, fetchAllPages, Invoice, Product, ProductList } from "@/lib/api";
 import { createInvoiceOffline, getProductsOffline, getClientsOffline } from "@/lib/offline-store";
 import { useAuth } from "@/lib/auth-context";
 
@@ -65,11 +65,11 @@ export default function NewFacturePage() {
       if (navigator.onLine) {
         try {
           const [p, c] = await Promise.all([
-            api.get<ProductList>("/products?page_size=200"),
-            api.get<ClientList>("/clients?page_size=200"),
+            fetchAllPages<Product>("/products", api.get<ProductList>),
+            fetchAllPages<Client>("/clients", api.get<ClientList>),
           ]);
-          setProducts(p.items);
-          setClients(c.items);
+          setProducts(p);
+          setClients(c);
         } catch {
           // On garde les données locales
         }

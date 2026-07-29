@@ -1,15 +1,6 @@
 import type { NextConfig } from "next";
-// @ts-ignore
-const withPWA = require("@ducanh2912/next-pwa").default({
-  dest: "public",
-  cacheOnFrontEndNav: true,
-  aggressiveFrontEndNavCaching: true,
-  reloadOnOnline: true,
-  disable: process.env.NODE_ENV === "development",
-  workboxOptions: {
-    disableDevLogs: true,
-  },
-});
+
+const isDev = process.env.NODE_ENV === "development";
 
 const nextConfig: NextConfig = {
   compiler: {
@@ -17,4 +8,22 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withPWA(nextConfig);
+// @ducanh2912/next-pwa injects a `webpack` key into the config unconditionally
+// (even when `disable: true`), which Next.js 16 treats as an incompatible
+// webpack config for Turbopack (the default in dev). Since PWA is disabled in
+// dev anyway, skip the wrapper entirely so `next dev` runs on Turbopack.
+// @ts-ignore
+const withPWA = isDev
+  ? null
+  : require("@ducanh2912/next-pwa").default({
+      dest: "public",
+      cacheOnFrontEndNav: true,
+      aggressiveFrontEndNavCaching: true,
+      reloadOnOnline: true,
+      disable: false,
+      workboxOptions: {
+        disableDevLogs: true,
+      },
+    });
+
+export default isDev ? nextConfig : withPWA(nextConfig);

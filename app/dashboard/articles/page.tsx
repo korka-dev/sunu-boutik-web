@@ -6,7 +6,7 @@ import SearchBar from "@/components/SearchBar";
 import SearchSelect from "@/components/SearchSelect";
 import { IconChart } from "@/components/Icons";
 import SkeletonRows from "@/components/SkeletonRows";
-import { api, ApiError, Category, CategoryList, Product, ProductList, ProductStats } from "@/lib/api";
+import { api, ApiError, Category, CategoryList, fetchAllPages, Product, ProductList, ProductStats } from "@/lib/api";
 
 const emptyForm = { name: "", category_id: "" as number | "", unit_price: "", quantity: "" };
 const PAGE_SIZE = 10;
@@ -72,16 +72,14 @@ export default function ArticlesPage() {
   }
 
   useEffect(() => {
-    api
-      .get<CategoryList>("/categories?page_size=100")
-      .then((list) => setCategories(list.items))
+    fetchAllPages<Category>("/categories", api.get<CategoryList>)
+      .then(setCategories)
       .catch(() => {});
   }, []);
 
   function loadAllProducts() {
-    api
-      .get<ProductList>("/products?page_size=200")
-      .then((list) => setAllProducts(list.items))
+    fetchAllPages<Product>("/products", api.get<ProductList>)
+      .then(setAllProducts)
       .catch(() => {});
   }
 

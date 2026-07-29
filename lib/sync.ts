@@ -1,5 +1,5 @@
 import { db, SyncQueueItem, LocalInvoice, LocalProduct, LocalClient, LocalCategory } from "./db";
-import { getToken } from "./api";
+import { getToken, fetchAllPages, Category, Client, Invoice, PaginatedList, Product } from "./api";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -119,59 +119,52 @@ export async function refreshLocalCache(shopId: number): Promise<void> {
   if (!navigator.onLine) return;
 
   try {
+    const getter = <T>(path: string): Promise<PaginatedList<T>> => serverRequest("GET", path);
     const [products, categories, clients, invoices] = await Promise.all([
-      serverRequest("GET", "/products?page_size=1000"),
-      serverRequest("GET", "/categories?page_size=1000"),
-      serverRequest("GET", "/clients?page_size=1000"),
-      serverRequest("GET", "/invoices?page_size=200"),
+      fetchAllPages<Product>("/products", getter),
+      fetchAllPages<Category>("/categories", getter),
+      fetchAllPages<Client>("/clients", getter),
+      fetchAllPages<Invoice>("/invoices", getter),
     ]);
 
     await db.transaction("rw", [db.products, db.categories, db.clients, db.invoices], async () => {
       // Produits
-      if (products?.items) {
-        for (const p of products.items) {
-          const existing = await db.products.where("serverId").equals(p.id).first();
-          if (!existing) {
-            await db.products.add({ ...p, localId: undefined, serverId: p.id, shop_id: shopId, _synced: true });
-          } else {
-            await db.products.update(existing.localId!, { ...p, serverId: p.id, _synced: true });
-          }
+      for (const p of products) {
+        const existing = await db.products.where("serverId").equals(p.id).first();
+        if (!existing) {
+          await db.products.add({ ...p, localId: undefined, serverId: p.id, shop_id: shopId, _synced: true });
+        } else {
+          await db.products.update(existing.localId!, { ...p, serverId: p.id, _synced: true });
         }
       }
 
       // Catégories
-      if (categories?.items) {
-        for (const c of categories.items) {
-          const existing = await db.categories.where("serverId").equals(c.id).first();
-          if (!existing) {
-            await db.categories.add({ ...c, localId: undefined, serverId: c.id, shop_id: shopId, _synced: true });
-          } else {
-            await db.categories.update(existing.localId!, { ...c, serverId: c.id, _synced: true });
-          }
+      for (const c of categories) {
+        const existing = await db.categories.where("serverId").equals(c.id).first();
+        if (!existing) {
+          await db.categories.add({ ...c, localId: undefined, serverId: c.id, shop_id: shopId, _synced: true });
+        } else {
+          await db.categories.update(existing.localId!, { ...c, serverId: c.id, _synced: true });
         }
       }
 
       // Clients
-      if (clients?.items) {
-        for (const c of clients.items) {
-          const existing = await db.clients.where("serverId").equals(c.id).first();
-          if (!existing) {
-            await db.clients.add({ ...c, localId: undefined, serverId: c.id, shop_id: shopId, _synced: true });
-          } else {
-            await db.clients.update(existing.localId!, { ...c, serverId: c.id, _synced: true });
-          }
+      for (const c of clients) {
+        const existing = await db.clients.where("serverId").equals(c.id).first();
+        if (!existing) {
+          await db.clients.add({ ...c, localId: undefined, serverId: c.id, shop_id: shopId, _synced: true });
+        } else {
+          await db.clients.update(existing.localId!, { ...c, serverId: c.id, _synced: true });
         }
       }
 
       // Factures
-      if (invoices?.items) {
-        for (const inv of invoices.items) {
-          const existing = await db.invoices.where("serverId").equals(inv.id).first();
-          if (!existing) {
-            await db.invoices.add({ ...inv, localId: undefined, serverId: inv.id, shop_id: shopId, _synced: true });
-          } else {
-            await db.invoices.update(existing.localId!, { ...inv, serverId: inv.id, _synced: true });
-          }
+      for (const inv of invoices) {
+        const existing = await db.invoices.where("serverId").equals(inv.id).first();
+        if (!existing) {
+          await db.invoices.add({ ...inv, localId: undefined, serverId: inv.id, shop_id: shopId, _synced: true });
+        } else {
+          await db.invoices.update(existing.localId!, { ...inv, serverId: inv.id, _synced: true });
         }
       }
     });
