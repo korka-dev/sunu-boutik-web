@@ -166,7 +166,7 @@ export default function FactureDetailPage() {
         )}
       </div>
 
-      <div className="bg-white rounded-xl shadow overflow-x-auto">
+      <div className="bg-white rounded-xl shadow overflow-x-auto print:mt-0">
         {format === "copies" ? (
           <InvoiceCopiesView invoice={invoice} shop={shop} client={client} />
         ) : pdfLoading ? (
@@ -185,12 +185,14 @@ export default function FactureDetailPage() {
         )}
       </div>
 
-      <PaymentHistory
-        invoiceId={invoiceId}
-        currentUser={currentUser}
-        refreshKey={invoice.amount_paid}
-        onVoided={loadInvoice}
-      />
+      <div className="no-print">
+        <PaymentHistory
+          invoiceId={invoiceId}
+          currentUser={currentUser}
+          refreshKey={invoice.amount_paid}
+          onVoided={loadInvoice}
+        />
+      </div>
 
       {showPaymentModal && (
         <PaymentModal
