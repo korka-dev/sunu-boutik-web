@@ -8,6 +8,14 @@ import { OfflineProvider } from "@/lib/offline-context";
 import OfflineIndicator from "@/components/OfflineIndicator";
 import { IconBox, IconCash, IconReceipt, IconTag, IconUsers, IconUser } from "@/components/Icons";
 
+function IconPlus({ className = "w-5 h-5" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className={className}>
+      <path d="M12 5v14M5 12h14" />
+    </svg>
+  );
+}
+
 const navItems = [
   { href: "/dashboard/categories", label: "Catégories", Icon: IconTag },
   { href: "/dashboard/articles", label: "Articles", Icon: IconBox },
@@ -62,6 +70,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <p className="font-bold text-blue-700">{shop?.name}</p>
           <p className="text-xs text-gray-500">{user.full_name}</p>
         </div>
+        {pathname !== "/dashboard/factures/new" && (
+          <div className="px-5 pt-4">
+            <Link
+              href="/dashboard/factures/new"
+              className="flex items-center justify-center gap-1.5 bg-blue-600 text-white rounded-md px-3 py-2.5 text-sm font-medium hover:bg-blue-700"
+            >
+              <IconPlus className="w-4 h-4" />
+              Nouvelle facture
+            </Link>
+          </div>
+        )}
         <nav className="flex-1 py-4 space-y-1">
           {navItems.map((item) => {
             const active = pathname.startsWith(item.href);
@@ -91,6 +110,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <main className="flex-1 bg-gray-50 px-4 sm:px-6 md:px-8 py-6 md:py-8 pb-24 md:pb-8 overflow-y-auto overflow-x-hidden">
         {children}
       </main>
+
+      {/* Mobile quick action: nouvelle facture accessible depuis n'importe quelle page */}
+      {pathname !== "/dashboard/factures/new" && (
+        <Link
+          href="/dashboard/factures/new"
+          aria-label="Nouvelle facture"
+          className="md:hidden no-print fixed right-4 z-30 bg-blue-600 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg hover:bg-blue-700"
+          style={{ bottom: "calc(64px + env(safe-area-inset-bottom) + 12px)" }}
+        >
+          <IconPlus className="w-6 h-6" />
+        </Link>
+      )}
 
       {/* Mobile bottom app nav */}
       <nav className="md:hidden no-print fixed bottom-0 left-0 right-0 z-30 bg-white border-t flex items-stretch pb-[env(safe-area-inset-bottom)]">
