@@ -1,3 +1,6 @@
+"use client";
+
+import { useLayoutEffect, useRef, useState } from "react";
 import { Client, Invoice, Shop } from "@/lib/api";
 
 function numberToWords(n: number): string {
@@ -23,6 +26,52 @@ const COPIES: { label: string; sub: string }[] = [
   { label: "CLIENT", sub: "À remettre au client" },
   { label: "PROPRIÉTAIRE", sub: "À conserver par la boutique" },
 ];
+
+// Conversion CSS mm -> px de référence, indépendante de l'écran (1mm = 96/25.4px, spec CSS).
+const MM_TO_PX = 96 / 25.4;
+// Budget de hauteur utile par page imprimée : page A4 (210mm) - marges @page (8mm*2)
+// - marge de sécurité (7mm) - padding vertical de .copy (8mm*2).
+const PAGE_CONTENT_HEIGHT_MM = 210 - 8 * 2 - 7 - 8 * 2;
+const PAGE_CONTENT_BUDGET_PX = PAGE_CONTENT_HEIGHT_MM * MM_TO_PX;
+
+// Répartit les lignes d'articles en pages selon leur hauteur réelle mesurée, en ne réservant
+// la place du pied de page (totaux/signatures/mentions) que sur la toute dernière page.
+function paginateLines(
+  rowHeights: number[],
+  overheadPx: number,
+  footerPx: number,
+  budgetPx: number
+): number[][] {
+  const rowBudget = Math.max(budgetPx - overheadPx, 0);
+  const pages: number[][] = [];
+  let current: number[] = [];
+  let used = 0;
+
+  rowHeights.forEach((h, i) => {
+    if (current.length > 0 && used + h > rowBudget) {
+      pages.push(current);
+      current = [];
+      used = 0;
+    }
+    current.push(i);
+    used += h;
+  });
+  pages.push(current);
+
+  // La dernière page doit aussi contenir le pied de page : si elle est trop pleine,
+  // on repousse ses dernières lignes sur une nouvelle page finale.
+  const overflow: number[] = [];
+  const lastPage = pages[pages.length - 1];
+  let lastUsed = lastPage.reduce((sum, idx) => sum + rowHeights[idx], 0);
+  while (lastPage.length > 0 && lastUsed + footerPx > rowBudget) {
+    const idx = lastPage.pop() as number;
+    lastUsed -= rowHeights[idx];
+    overflow.unshift(idx);
+  }
+  if (overflow.length > 0) pages.push(overflow);
+
+  return pages;
+}
 
 type IconName = "shop" | "phone" | "pin" | "id" | "user" | "hash" | "calendar" | "clock";
 
@@ -102,6 +151,7 @@ function InvoiceHeader({
   invoiceNumber,
   dateStr,
   heureStr,
+  pageLabel,
 }: {
   shop: Shop;
   phones: string;
@@ -110,6 +160,7 @@ function InvoiceHeader({
   invoiceNumber: string | number;
   dateStr: string;
   heureStr: string;
+  pageLabel?: string;
 }) {
   return (
     <div className="inv-header">
@@ -132,6 +183,93 @@ function InvoiceHeader({
         <span><Icon name="hash" />Facture N° {invoiceNumber}</span>
         <span><Icon name="calendar" />{dateStr}</span>
         <span><Icon name="clock" />{heureStr}</span>
+        {pageLabel && <span>Page {pageLabel}</span>}
+      </div>
+    </div>
+  );
+}
+
+function CopyBannerBlock({ label, sub }: { label: string; sub: string }) {
+  return (
+    <div className="copy-banner">
+      <span>{label}</span>
+      <span style={{ fontWeight: "normal", letterSpacing: 0 }}>{sub}</span>
+    </div>
+  );
+}
+
+function InvoiceTableHead() {
+  return (
+    <thead>
+      <tr>
+        <th style={{ width: "8%" }}>Qté</th>
+        <th style={{ width: "52%" }}>Désignation</th>
+        <th className="right" style={{ width: "20%" }}>Px unitaire</th>
+        <th className="right" style={{ width: "20%" }}>Montant TTC</th>
+      </tr>
+    </thead>
+  );
+}
+
+function invoiceLineCells(line: Invoice["lines"][number]) {
+  return (
+    <>
+      <td className="right">{line.quantity % 1 === 0 ? Math.floor(line.quantity) : line.quantity}</td>
+      <td>{line.product_name}</td>
+      <td className="right">{line.unit_price.toLocaleString("fr-FR")}</td>
+      <td className="right">{line.line_total.toLocaleString("fr-FR")}</td>
+    </>
+  );
+}
+
+function InvoiceSummaryBlock({
+  totalQty,
+  total,
+  amountWords,
+}: {
+  totalQty: number;
+  total: number;
+  amountWords: string;
+}) {
+  return (
+    <div className="copy-summary">
+      <div className="footer-totals">
+        <div className="ft-cell">
+          <div className="ft-label">Total Articles</div>
+          <div className="ft-value">{totalQty % 1 === 0 ? Math.floor(totalQty) : totalQty}</div>
+        </div>
+        <div className="ft-cell">
+          <div className="ft-label">TOTAL</div>
+          <div className="ft-value">{total.toLocaleString("fr-FR")}</div>
+        </div>
+        <div className="ft-cell">
+          <div className="ft-label">ACOMPTE</div>
+          <div className="ft-value">0</div>
+        </div>
+        <div className="ft-cell">
+          <div className="ft-label">NET À PAYER</div>
+          <div className="ft-value">{total.toLocaleString("fr-FR")}</div>
+        </div>
+      </div>
+
+      <div className="signatures">
+        <div className="sig-cell"><div className="sig-label">VISA RESPONSABLE DÉPÔT</div></div>
+        <div className="sig-cell"><div className="sig-label">VISA LIVREUR</div></div>
+        <div className="sig-cell"><div className="sig-label">VISA CAISSIER</div></div>
+      </div>
+
+      <div className="bottom-text">
+        Arrêtée la présente facture à la somme de : <em>{amountWords}</em>
+      </div>
+    </div>
+  );
+}
+
+function InvoiceSignoffBlock() {
+  return (
+    <div className="copy-signoff">
+      <div className="bottom-text">
+        <em>Merci pour votre confiance !</em>
       </div>
     </div>
   );
@@ -157,11 +295,36 @@ export default function InvoiceCopiesView({
   const phones = [shop.phone, shop.phone2, shop.phone3].filter(Boolean).join(" - ");
   const amountWords = numberToWords(Math.round(invoice.total)) + " francs CFA";
 
+  const scaffoldRef = useRef<HTMLDivElement>(null);
+  const [pages, setPages] = useState<number[][] | null>(null);
+
+  useLayoutEffect(() => {
+    const scaffold = scaffoldRef.current;
+    if (!scaffold) return;
+    const bannerH = (scaffold.querySelector<HTMLElement>(".copy-banner")?.offsetHeight ?? 0) + 6;
+    const headerH = (scaffold.querySelector<HTMLElement>(".inv-header")?.offsetHeight ?? 0) + 8;
+    const theadH = scaffold.querySelector<HTMLElement>("thead")?.offsetHeight ?? 0;
+    const summaryH = scaffold.querySelector<HTMLElement>(".copy-summary")?.offsetHeight ?? 0;
+    const signoffH = scaffold.querySelector<HTMLElement>(".copy-signoff")?.offsetHeight ?? 0;
+    const rowHeights = Array.from(scaffold.querySelectorAll<HTMLElement>("tbody tr")).map((el) => el.offsetHeight);
+
+    const overhead = bannerH + headerH + theadH;
+    const footerH = summaryH + signoffH;
+    setPages(paginateLines(rowHeights, overhead, footerH, PAGE_CONTENT_BUDGET_PX));
+  }, [invoice, shop, client]);
+
+  const effectivePages = pages ?? [invoice.lines.map((_, i) => i)];
+  const showPageLabel = effectivePages.length > 1;
+
   return (
     <div className="copies-preview">
       <style>{`
         .invoice-copies, .invoice-copies * { box-sizing: border-box; margin: 0; padding: 0; overflow-wrap: break-word; }
         .invoice-copies { font-family: Arial, Helvetica, sans-serif; font-size: 11px; }
+
+        /* Rendu invisible utilisé uniquement pour mesurer la hauteur réelle du contenu avant pagination */
+        .measure-scaffold { position: absolute; top: 0; left: -99999px; visibility: hidden; pointer-events: none; }
+        @media print { .measure-scaffold { display: none; } }
 
         @media print {
           @page { size: A4 landscape; margin: 8mm; }
@@ -173,9 +336,15 @@ export default function InvoiceCopiesView({
           width: 100%; max-width: 297mm; margin: 0 auto; background: white;
           display: grid; grid-template-columns: 1fr 1fr;
           height: 210mm;
+          box-shadow: 0 1px 4px rgba(0,0,0,0.15);
         }
+        .invoice-copies.a4 + .invoice-copies.a4 { margin-top: 16px; }
         @media print {
-          .invoice-copies.a4 { height: calc(210mm - 16mm); }
+          .invoice-copies.a4 { height: calc(210mm - 16mm - 7mm); box-shadow: none; }
+          .invoice-copies.a4 + .invoice-copies.a4 { margin-top: 0; }
+          .invoice-copies.a4 { break-after: page; page-break-after: always; }
+          .invoice-copies.a4:last-child { break-after: auto; page-break-after: avoid; }
+          .invoice-copies .copy-signoff { page-break-inside: avoid; break-inside: avoid; }
         }
         .invoice-copies .copy {
           display: flex; flex-direction: column;
@@ -238,97 +407,81 @@ export default function InvoiceCopiesView({
         .invoice-copies .sig-cell:last-child { border-right: none; }
         .invoice-copies .sig-label { font-size: 8px; font-weight: bold; text-align: center; border-bottom: 1px solid #ddd; padding-bottom: 2px; margin-bottom: 4px; }
 
-        .invoice-copies .bottom-text { margin-top: 5px; font-size: 8.5px; }
+        .invoice-copies .bottom-text { margin-top: 3px; font-size: 8.5px; line-height: 1.2; }
         .invoice-copies .bottom-ref { display: flex; justify-content: space-between; margin-top: 2px; font-size: 8px; color: #555; }
       `}</style>
 
-      <div className="invoice-copies a4">
-        {COPIES.map((copy, ci) => (
-          <div key={ci} className="copy">
-            <div className="copy-banner">
-              <span>{copy.label}</span>
-              <span style={{ fontWeight: "normal", letterSpacing: 0 }}>{copy.sub}</span>
-            </div>
-
-            {/* Header — 2 colonnes (boutique / client), réutilisable pour Ticket/A4 */}
-            <InvoiceHeader
-              shop={shop}
-              phones={phones}
-              clientLabel={clientLabel}
-              clientAddress={clientAddress}
-              invoiceNumber={invoice.number}
-              dateStr={dateStr}
-              heureStr={heureStr}
-            />
-
-            {/* Table — occupe l'espace disponible entre l'en-tête et le pied de facture */}
-            <div className="items-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th style={{ width: "8%" }}>Qté</th>
-                    <th style={{ width: "52%" }}>Désignation</th>
-                    <th className="right" style={{ width: "20%" }}>Px unitaire</th>
-                    <th className="right" style={{ width: "20%" }}>Montant TTC</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {invoice.lines.map((line, i) => (
-                    <tr key={i}>
-                      <td className="right">{line.quantity % 1 === 0 ? Math.floor(line.quantity) : line.quantity}</td>
-                      <td>{line.product_name}</td>
-                      <td className="right">{line.unit_price.toLocaleString("fr-FR")}</td>
-                      <td className="right">{line.line_total.toLocaleString("fr-FR")}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Totaux, signatures et mention légale — juste sous le tableau */}
-            <div className="copy-summary">
-              <div className="footer-totals">
-                <div className="ft-cell">
-                  <div className="ft-label">Total Articles</div>
-                  <div className="ft-value">{totalQty % 1 === 0 ? Math.floor(totalQty) : totalQty}</div>
-                </div>
-                <div className="ft-cell">
-                  <div className="ft-label">TOTAL</div>
-                  <div className="ft-value">{invoice.total.toLocaleString("fr-FR")}</div>
-                </div>
-                <div className="ft-cell">
-                  <div className="ft-label">ACOMPTE</div>
-                  <div className="ft-value">0</div>
-                </div>
-                <div className="ft-cell">
-                  <div className="ft-label">NET À PAYER</div>
-                  <div className="ft-value">{invoice.total.toLocaleString("fr-FR")}</div>
-                </div>
-              </div>
-
-              <div className="signatures">
-                <div className="sig-cell"><div className="sig-label">VISA RESPONSABLE DÉPÔT</div></div>
-                <div className="sig-cell"><div className="sig-label">VISA LIVREUR</div></div>
-                <div className="sig-cell"><div className="sig-label">VISA CAISSIER</div></div>
-              </div>
-
-              <div className="bottom-text">
-                Arrêtée la présente facture à la somme de : <em>{amountWords}</em>
-              </div>
-            </div>
-
-            {/* Pied de page réel — toujours collé au bas de la demi-page */}
-            <div className="copy-signoff">
-              <div className="bottom-text">
-                <em>Merci pour votre confiance !</em>
-              </div>
-              <div className="bottom-text" style={{ textAlign: "center", marginTop: "4px" }}>
-                <em>www.sunu-boutik.com</em>
-              </div>
-            </div>
+      {/* Scaffold caché : rend une copie complète hors écran pour mesurer les hauteurs réelles
+          (bannière, en-tête, chaque ligne, pied de page) avant de calculer la pagination. */}
+      <div ref={scaffoldRef} className="measure-scaffold invoice-copies" aria-hidden="true">
+        <div className="copy" style={{ width: "140mm" }}>
+          <CopyBannerBlock label={COPIES[0].label} sub={COPIES[0].sub} />
+          <InvoiceHeader
+            shop={shop}
+            phones={phones}
+            clientLabel={clientLabel}
+            clientAddress={clientAddress}
+            invoiceNumber={invoice.number}
+            dateStr={dateStr}
+            heureStr={heureStr}
+          />
+          <div className="items-wrap">
+            <table>
+              <InvoiceTableHead />
+              <tbody>
+                {invoice.lines.map((line, i) => (
+                  <tr key={i}>{invoiceLineCells(line)}</tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        ))}
+          <InvoiceSummaryBlock totalQty={totalQty} total={invoice.total} amountWords={amountWords} />
+          <InvoiceSignoffBlock />
+        </div>
       </div>
+
+      {effectivePages.map((lineIdxs, pageIdx) => {
+        const isLastPage = pageIdx === effectivePages.length - 1;
+        const pageLabel = showPageLabel ? `${pageIdx + 1}/${effectivePages.length}` : undefined;
+        return (
+          <div key={pageIdx} className="invoice-copies a4">
+            {COPIES.map((copy, ci) => (
+              <div key={ci} className="copy">
+                <CopyBannerBlock label={copy.label} sub={copy.sub} />
+
+                <InvoiceHeader
+                  shop={shop}
+                  phones={phones}
+                  clientLabel={clientLabel}
+                  clientAddress={clientAddress}
+                  invoiceNumber={invoice.number}
+                  dateStr={dateStr}
+                  heureStr={heureStr}
+                  pageLabel={pageLabel}
+                />
+
+                <div className="items-wrap">
+                  <table>
+                    <InvoiceTableHead />
+                    <tbody>
+                      {lineIdxs.map((li) => (
+                        <tr key={li}>{invoiceLineCells(invoice.lines[li])}</tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {isLastPage && (
+                  <>
+                    <InvoiceSummaryBlock totalQty={totalQty} total={invoice.total} amountWords={amountWords} />
+                    <InvoiceSignoffBlock />
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+        );
+      })}
     </div>
   );
 }
