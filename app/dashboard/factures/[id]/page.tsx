@@ -19,7 +19,7 @@ export default function FactureDetailPage() {
   const [currentUser, setCurrentUser] = useState<{ id: number; full_name: string } | null>(null);
   const [client, setClient] = useState<Client | null>(null);
   const [error, setError] = useState("");
-  const [format, setFormat] = useState<ViewFormat>("ticket");
+  const [format, setFormat] = useState<ViewFormat>("copies");
   const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);

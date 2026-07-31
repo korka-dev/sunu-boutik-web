@@ -30,10 +30,11 @@ export async function createInvoiceOffline(
     const form = prod?.is_transformable ? l.form || "principale" : null;
     const defaultPrice = form === "secondaire" ? prod?.unit_price_secondaire : prod?.unit_price;
     const unit_price = l.unit_price ?? defaultPrice ?? 0;
-    const productLabel = form === "secondaire" ? ` (${prod?.unit_secondaire})` : form === "principale" ? ` (${prod?.unit})` : "";
+    const formLabel = form === "secondaire" ? prod?.unit_secondaire : form === "principale" ? prod?.unit : null;
+    const productLabel = formLabel ? `${formLabel.toUpperCase()} ` : "";
     return {
       product_id: l.product_id,
-      product_name: `${prod?.name ?? `Article #${l.product_id}`}${productLabel}`,
+      product_name: `${productLabel}${prod?.name ?? `Article #${l.product_id}`}`,
       quantity: l.quantity,
       unit_price,
       line_total: unit_price * l.quantity,

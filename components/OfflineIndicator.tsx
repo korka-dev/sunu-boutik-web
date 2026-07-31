@@ -10,7 +10,7 @@ export default function OfflineIndicator() {
 
   return (
     <div
-      className={`fixed bottom-20 md:bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-2 rounded-full shadow-lg text-sm font-medium transition-all ${
+      className={`no-print fixed bottom-20 md:bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-2 rounded-full shadow-lg text-sm font-medium transition-all ${
         online
           ? "bg-amber-50 border border-amber-300 text-amber-800"
           : "bg-red-50 border border-red-300 text-red-700"
