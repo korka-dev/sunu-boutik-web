@@ -1,9 +1,8 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import Modal from "@/components/Modal";
 import SearchBar from "@/components/SearchBar";
-import SearchSelect from "@/components/SearchSelect";
 import SkeletonRows from "@/components/SkeletonRows";
 import { api, ApiError, Client, ClientList, fetchAllPages } from "@/lib/api";
 
@@ -25,6 +24,18 @@ export default function ClientsPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
+
+  const [nameSuggestOpen, setNameSuggestOpen] = useState(false);
+  const nameFieldRef = useRef<HTMLDivElement>(null);
+
+  async function loadAllClients() {
+    try {
+      const items = await fetchAllPages<Client>("/clients", api.get<ClientList>);
+      setAllClients(items);
+    } catch {
+      // Les suggestions sont un confort, pas bloquant si ça échoue
+    }
+  }
 
   async function load() {
     setLoading(true);
@@ -48,14 +59,18 @@ export default function ClientsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, search]);
 
-  function loadAllClients() {
-    fetchAllPages<Client>("/clients", api.get<ClientList>)
-      .then(setAllClients)
-      .catch(() => {});
-  }
-
   useEffect(() => {
     loadAllClients();
+  }, []);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (nameFieldRef.current && !nameFieldRef.current.contains(e.target as Node)) {
+        setNameSuggestOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   function onSearchChange(value: string) {
@@ -67,6 +82,7 @@ export default function ClientsPage() {
     setEditingId(null);
     setForm(emptyForm);
     setFormError("");
+    setNameSuggestOpen(false);
     setShowModal(true);
   }
 
@@ -74,12 +90,19 @@ export default function ClientsPage() {
     setEditingId(c.id);
     setForm({ name: c.name, phone: c.phone || "", address: c.address || "" });
     setFormError("");
+    setNameSuggestOpen(false);
     setShowModal(true);
   }
 
   function closeModal() {
     setShowModal(false);
+    setNameSuggestOpen(false);
   }
+
+  const trimmedFormName = form.name.trim().toLowerCase();
+  const nameMatches = trimmedFormName
+    ? allClients.filter((c) => c.id !== editingId && c.name.toLowerCase().includes(trimmedFormName))
+    : [];
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -106,8 +129,7 @@ export default function ClientsPage() {
         setPage(1);
       }
       closeModal();
-      await load();
-      loadAllClients();
+      await Promise.all([load(), loadAllClients()]);
     } catch (err) {
       setFormError(err instanceof ApiError ? err.message : "Erreur lors de l'enregistrement");
     } finally {
@@ -119,7 +141,7 @@ export default function ClientsPage() {
     if (!confirm("Supprimer ce client ?")) return;
     try {
       await api.delete(`/clients/${id}`);
-      await load();
+      await Promise.all([load(), loadAllClients()]);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Erreur lors de la suppression");
     }
@@ -204,17 +226,36 @@ export default function ClientsPage() {
       {showModal && (
         <Modal title={editingId ? "Modifier le client" : "Ajouter un client"} onClose={closeModal}>
           <form onSubmit={onSubmit} className="space-y-4">
-            <div>
+            <div ref={nameFieldRef} className="relative">
               <label className="block text-xs font-medium text-gray-600 mb-1">Nom</label>
-              <SearchSelect
-                options={allClients
-                  .filter((c) => c.id !== editingId)
-                  .map((c) => ({ id: c.id, label: c.name, sublabel: c.phone || undefined }))}
-                allowFreeText
-                freeTextValue={form.name}
-                onFreeTextChange={(text) => setForm((f) => ({ ...f, name: text }))}
-                placeholder="Nom du client"
+              <input
+                value={form.name}
+                onChange={(e) => {
+                  setForm({ ...form, name: e.target.value });
+                  setNameSuggestOpen(true);
+                }}
+                onFocus={() => setNameSuggestOpen(true)}
+                autoComplete="off"
+                className="w-full rounded-md border border-gray-300 px-3 py-2"
               />
+              {nameSuggestOpen && nameMatches.length > 0 && (
+                <div className="absolute z-20 mt-1 w-full max-h-56 overflow-y-auto rounded-md border border-gray-200 bg-white shadow-lg">
+                  <p className="px-3 py-1.5 text-xs text-gray-400 border-b">
+                    {nameMatches.length} client{nameMatches.length > 1 ? "s" : ""} existant{nameMatches.length > 1 ? "s" : ""} avec ce nom
+                  </p>
+                  {nameMatches.map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onMouseDown={() => openEdit(c)}
+                      className="block w-full text-left px-3 py-2 text-sm hover:bg-blue-50"
+                    >
+                      {c.name}
+                      {c.phone && <span className="block text-xs text-gray-400">{c.phone}</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">
