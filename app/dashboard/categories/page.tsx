@@ -3,13 +3,15 @@
 import { FormEvent, useEffect, useState } from "react";
 import Modal from "@/components/Modal";
 import SearchBar from "@/components/SearchBar";
+import SearchSelect from "@/components/SearchSelect";
 import SkeletonRows from "@/components/SkeletonRows";
-import { api, ApiError, Category, CategoryList } from "@/lib/api";
+import { api, ApiError, Category, CategoryList, fetchAllPages } from "@/lib/api";
 
 const PAGE_SIZE = 10;
 
 export default function CategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
+  const [allCategories, setAllCategories] = useState<Category[]>([]);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [totalPages, setTotalPages] = useState(1);
@@ -44,6 +46,16 @@ export default function CategoriesPage() {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, search]);
+
+  function loadAllCategories() {
+    fetchAllPages<Category>("/categories", api.get<CategoryList>)
+      .then(setAllCategories)
+      .catch(() => {});
+  }
+
+  useEffect(() => {
+    loadAllCategories();
+  }, []);
 
   function onSearchChange(value: string) {
     setSearch(value);
@@ -86,6 +98,7 @@ export default function CategoriesPage() {
       }
       closeModal();
       await load();
+      loadAllCategories();
     } catch (err) {
       setFormError(err instanceof ApiError ? err.message : "Erreur lors de l'enregistrement");
     } finally {
@@ -136,7 +149,7 @@ export default function CategoriesPage() {
             )}
             {categories.map((c) => (
               <tr key={c.id} className="border-t">
-                <td className="px-4 py-3 font-medium">{c.name}</td>
+                <td className="px-4 py-3 font-medium uppercase">{c.name}</td>
                 <td className="px-4 py-3 text-right space-x-3">
                   <button onClick={() => openEdit(c)} className="text-blue-600 hover:underline">
                     Modifier
@@ -180,10 +193,14 @@ export default function CategoriesPage() {
           <form onSubmit={onSubmit} className="space-y-4">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Nom</label>
-              <input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full rounded-md border border-gray-300 px-3 py-2"
+              <SearchSelect
+                options={allCategories
+                  .filter((c) => c.id !== editingId)
+                  .map((c) => ({ id: c.id, label: c.name }))}
+                allowFreeText
+                freeTextValue={name}
+                onFreeTextChange={setName}
+                placeholder="Nom de la catégorie"
               />
             </div>
 

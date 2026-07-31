@@ -151,7 +151,7 @@ export default function FacturesPage() {
       <SearchBar
         value={search}
         onChange={onSearchChange}
-        placeholder="Rechercher une facture (numéro)..."
+        placeholder="Rechercher une facture (numéro ou nom du client)..."
         maxWidthClassName="max-w-2xl"
       />
 

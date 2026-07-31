@@ -3,14 +3,16 @@
 import { FormEvent, useEffect, useState } from "react";
 import Modal from "@/components/Modal";
 import SearchBar from "@/components/SearchBar";
+import SearchSelect from "@/components/SearchSelect";
 import SkeletonRows from "@/components/SkeletonRows";
-import { api, ApiError, Client, ClientList } from "@/lib/api";
+import { api, ApiError, Client, ClientList, fetchAllPages } from "@/lib/api";
 
 const emptyForm = { name: "", phone: "", address: "" };
 const PAGE_SIZE = 10;
 
 export default function ClientsPage() {
   const [clients, setClients] = useState<Client[]>([]);
+  const [allClients, setAllClients] = useState<Client[]>([]);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [totalPages, setTotalPages] = useState(1);
@@ -45,6 +47,16 @@ export default function ClientsPage() {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, search]);
+
+  function loadAllClients() {
+    fetchAllPages<Client>("/clients", api.get<ClientList>)
+      .then(setAllClients)
+      .catch(() => {});
+  }
+
+  useEffect(() => {
+    loadAllClients();
+  }, []);
 
   function onSearchChange(value: string) {
     setSearch(value);
@@ -95,6 +107,7 @@ export default function ClientsPage() {
       }
       closeModal();
       await load();
+      loadAllClients();
     } catch (err) {
       setFormError(err instanceof ApiError ? err.message : "Erreur lors de l'enregistrement");
     } finally {
@@ -193,10 +206,14 @@ export default function ClientsPage() {
           <form onSubmit={onSubmit} className="space-y-4">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Nom</label>
-              <input
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="w-full rounded-md border border-gray-300 px-3 py-2"
+              <SearchSelect
+                options={allClients
+                  .filter((c) => c.id !== editingId)
+                  .map((c) => ({ id: c.id, label: c.name, sublabel: c.phone || undefined }))}
+                allowFreeText
+                freeTextValue={form.name}
+                onFreeTextChange={(text) => setForm((f) => ({ ...f, name: text }))}
+                placeholder="Nom du client"
               />
             </div>
             <div>
