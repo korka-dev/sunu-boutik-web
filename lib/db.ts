@@ -14,6 +14,11 @@ export interface LocalProduct {
   quantity: number;
   unit: string;
   pack_size: number;
+  is_transformable: boolean;
+  unit_secondaire?: string | null;
+  conversion_ratio?: number | null;
+  unit_price_secondaire?: number | null;
+  quantity_secondaire: number;
   created_at: string;
   _synced: boolean;
   _deleted?: boolean;
@@ -47,6 +52,7 @@ export interface LocalInvoiceLine {
   quantity: number;
   unit_price: number;
   line_total: number;
+  form?: "principale" | "secondaire" | null;
 }
 
 export interface LocalInvoice {

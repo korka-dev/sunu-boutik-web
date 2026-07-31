@@ -38,6 +38,7 @@ async function processItem(item: SyncQueueItem): Promise<void> {
           product_id: l.product_id,
           quantity: l.quantity,
           unit_price: l.unit_price,
+          form: l.form ?? null,
         })),
       };
       const created = await serverRequest("POST", "/invoices", serverPayload);

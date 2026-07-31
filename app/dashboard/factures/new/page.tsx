@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import SearchSelect from "@/components/SearchSelect";
-import { api, ApiError, Client, ClientList, fetchAllPages, Invoice, Product, ProductList } from "@/lib/api";
+import { api, ApiError, Client, ClientList, fetchAllPages, Invoice, Product, ProductForm, ProductList } from "@/lib/api";
 import { createInvoiceOffline, getProductsOffline, getClientsOffline } from "@/lib/offline-store";
 import { useAuth } from "@/lib/auth-context";
 
@@ -14,6 +14,7 @@ interface LineItem {
   quantity: number | "";
   saleUnit: "unite" | "carton";
   unitPriceOverride: string;
+  form: ProductForm;
 }
 
 interface Draft {
@@ -22,7 +23,7 @@ interface Draft {
   lines: LineItem[];
 }
 
-const defaultLine = (): LineItem => ({ product_id: 0, quantity: 1, saleUnit: "unite", unitPriceOverride: "" });
+const defaultLine = (): LineItem => ({ product_id: 0, quantity: 1, saleUnit: "unite", unitPriceOverride: "", form: "principale" });
 
 function loadDraft(): Draft | null {
   try {
@@ -145,7 +146,17 @@ export default function NewFacturePage() {
     if (line.unitPriceOverride !== "" && !Number.isNaN(parseFloat(line.unitPriceOverride))) {
       return parseFloat(line.unitPriceOverride);
     }
+    if (product?.is_transformable && line.form === "secondaire") {
+      return product.unit_price_secondaire || 0;
+    }
     return product?.unit_price || 0;
+  }
+
+  function availableStock(line: LineItem) {
+    const product = productOf(line.product_id);
+    if (!product) return undefined;
+    if (product.is_transformable && line.form === "secondaire") return product.quantity_secondaire;
+    return product.quantity;
   }
 
   const total = lines.reduce((sum, l) => sum + effectiveUnitPrice(l) * baseQuantity(l), 0);
@@ -156,10 +167,12 @@ export default function NewFacturePage() {
       .filter((l) => l.product_id && l.quantity !== "" && l.quantity > 0)
       .map((l) => {
         const override = l.unitPriceOverride !== "" ? parseFloat(l.unitPriceOverride) : NaN;
+        const product = productOf(l.product_id);
         return {
           product_id: l.product_id,
           quantity: baseQuantity(l),
           unit_price: Number.isNaN(override) ? null : override,
+          form: product?.is_transformable ? l.form : null,
         };
       });
     if (validLines.length === 0) {
@@ -258,12 +271,19 @@ export default function NewFacturePage() {
                       options={products.map((p) => ({
                         id: p.id,
                         label: p.name,
-                        sublabel: `${p.quantity} dispo.${p.pack_size > 1 ? ` — carton ${p.pack_size}` : ""}`,
+                        sublabel: p.is_transformable
+                          ? `${p.quantity} ${p.unit} / ${p.quantity_secondaire} ${p.unit_secondaire} dispo.`
+                          : `${p.quantity} dispo.${p.pack_size > 1 ? ` — carton ${p.pack_size}` : ""}`,
                       }))}
                       value={line.product_id || ""}
                       onChange={(id) => {
                         const p = products.find((pr) => pr.id === id);
-                        updateLine(i, { product_id: id || 0, saleUnit: "unite", unitPriceOverride: p ? String(p.unit_price) : "" });
+                        updateLine(i, {
+                          product_id: id || 0,
+                          saleUnit: "unite",
+                          form: "principale",
+                          unitPriceOverride: p ? String(p.unit_price) : "",
+                        });
                       }}
                       placeholder="Article..."
                     />
@@ -278,6 +298,19 @@ export default function NewFacturePage() {
                       <option value="unite">Unité</option>
                       <option value="carton">Carton</option>
                     </select>
+                  ) : product?.is_transformable ? (
+                    <select
+                      value={line.form}
+                      onChange={(e) => {
+                        const f = e.target.value as ProductForm;
+                        const price = f === "secondaire" ? product.unit_price_secondaire : product.unit_price;
+                        updateLine(i, { form: f, unitPriceOverride: price != null ? String(price) : "" });
+                      }}
+                      className="col-span-6 sm:col-span-2 rounded-md border border-gray-300 px-2 py-2 text-sm"
+                    >
+                      <option value="principale">{product.unit}</option>
+                      <option value="secondaire">{product.unit_secondaire}</option>
+                    </select>
                   ) : (
                     <div className="hidden sm:block sm:col-span-2" />
                   )}
@@ -288,7 +321,9 @@ export default function NewFacturePage() {
                     min="1"
                     value={line.quantity}
                     onChange={(e) => updateLine(i, { quantity: e.target.value === "" ? "" : Number(e.target.value) })}
-                    className="col-span-3 sm:col-span-2 rounded-md border border-gray-300 px-2 py-2 text-sm"
+                    className={`col-span-3 sm:col-span-2 rounded-md border px-2 py-2 text-sm ${
+                      product && (availableStock(line) ?? 0) < (line.quantity || 0) ? "border-red-400 text-red-600" : "border-gray-300"
+                    }`}
                     placeholder="Qté"
                   />
                   <input

@@ -8,7 +8,17 @@ import { IconChart } from "@/components/Icons";
 import SkeletonRows from "@/components/SkeletonRows";
 import { api, ApiError, Category, CategoryList, fetchAllPages, Product, ProductList, ProductStats } from "@/lib/api";
 
-const emptyForm = { name: "", category_id: "" as number | "", unit_price: "", quantity: "" };
+const emptyForm = {
+  name: "",
+  category_id: "" as number | "",
+  unit_price: "",
+  quantity: "",
+  is_transformable: false,
+  unit_principale: "",
+  unit_secondaire: "",
+  conversion_ratio: "",
+  unit_price_secondaire: "",
+};
 const PAGE_SIZE = 10;
 
 export default function ArticlesPage() {
@@ -25,6 +35,7 @@ export default function ArticlesPage() {
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingQuantitySecondaire, setEditingQuantitySecondaire] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
 
@@ -90,6 +101,7 @@ export default function ArticlesPage() {
   function openCreate() {
     setEditingId(null);
     setForm(emptyForm);
+    setEditingQuantitySecondaire(0);
     setFormError("");
     setShowModal(true);
   }
@@ -101,7 +113,13 @@ export default function ArticlesPage() {
       category_id: p.category_id,
       unit_price: String(p.unit_price),
       quantity: String(p.quantity),
+      is_transformable: p.is_transformable,
+      unit_principale: p.is_transformable ? p.unit : "",
+      unit_secondaire: p.unit_secondaire || "",
+      conversion_ratio: p.conversion_ratio != null ? String(p.conversion_ratio) : "",
+      unit_price_secondaire: p.unit_price_secondaire != null ? String(p.unit_price_secondaire) : "",
     });
+    setEditingQuantitySecondaire(p.quantity_secondaire);
     setFormError("");
     setShowModal(true);
   }
@@ -134,13 +152,46 @@ export default function ArticlesPage() {
       return;
     }
 
-    setSubmitting(true);
-    const payload = {
+    const payload: Record<string, unknown> = {
       name: trimmedName,
       category_id: Number(form.category_id),
       unit_price: unitPrice,
       quantity,
+      is_transformable: form.is_transformable,
     };
+
+    if (form.is_transformable) {
+      const unitPrincipale = form.unit_principale.trim();
+      const unitSecondaire = form.unit_secondaire.trim();
+      if (!unitPrincipale) {
+        setFormError("Le nom de la forme principale est requis (ex: carton)");
+        return;
+      }
+      if (!unitSecondaire) {
+        setFormError("Le nom de la forme secondaire est requis (ex: seau)");
+        return;
+      }
+      if (unitPrincipale.toLowerCase() === unitSecondaire.toLowerCase()) {
+        setFormError("La forme principale et la forme secondaire doivent être différentes");
+        return;
+      }
+      const ratio = parseFloat(form.conversion_ratio);
+      if (form.conversion_ratio === "" || Number.isNaN(ratio) || ratio <= 0) {
+        setFormError(`Indiquez combien de ${unitSecondaire || "forme secondaire"} vaut 1 ${unitPrincipale}`);
+        return;
+      }
+      const priceSecondaire = parseFloat(form.unit_price_secondaire);
+      if (form.unit_price_secondaire === "" || Number.isNaN(priceSecondaire) || priceSecondaire < 0) {
+        setFormError(`Le prix unitaire de la forme secondaire (${unitSecondaire}) est requis`);
+        return;
+      }
+      payload.unit = unitPrincipale;
+      payload.unit_secondaire = unitSecondaire;
+      payload.conversion_ratio = ratio;
+      payload.unit_price_secondaire = priceSecondaire;
+    }
+
+    setSubmitting(true);
     try {
       if (editingId) {
         await api.patch(`/products/${editingId}`, payload);
@@ -213,11 +264,30 @@ export default function ArticlesPage() {
             )}
             {products.map((p) => (
               <tr key={p.id} className="border-t">
-                <td className="px-4 py-3 font-medium">{p.name}</td>
+                <td className="px-4 py-3 font-medium">
+                  {p.name}
+                  {p.is_transformable && (
+                    <span className="ml-2 inline-block text-[10px] uppercase tracking-wide bg-blue-50 text-blue-600 rounded px-1.5 py-0.5 align-middle">
+                      Transformable
+                    </span>
+                  )}
+                </td>
                 <td className="px-4 py-3 text-gray-500">{p.category_name}</td>
-                <td className="px-4 py-3 text-right">{p.unit_price.toLocaleString()} FCFA</td>
+                <td className="px-4 py-3 text-right">
+                  {p.unit_price.toLocaleString()} FCFA
+                  {p.is_transformable && (
+                    <span className="block text-xs text-gray-400">
+                      {p.unit_price_secondaire?.toLocaleString()} FCFA / {p.unit_secondaire}
+                    </span>
+                  )}
+                </td>
                 <td className={`px-4 py-3 text-right ${p.quantity <= 0 ? "text-red-600 font-semibold" : ""}`}>
-                  {p.quantity}
+                  {p.quantity} {p.is_transformable ? p.unit : ""}
+                  {p.is_transformable && (
+                    <span className="block text-xs text-gray-400 font-normal">
+                      {p.quantity_secondaire} {p.unit_secondaire}
+                    </span>
+                  )}
                 </td>
                 <td className="px-4 py-3 text-right space-x-3">
                   <button onClick={() => openEdit(p)} className="text-blue-600 hover:underline">
@@ -301,7 +371,9 @@ export default function ArticlesPage() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Quantité en stock</label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  Quantité en stock{form.is_transformable && form.unit_principale ? ` (${form.unit_principale})` : ""}
+                </label>
                 <input
                   type="number"
                   step="0.1"
@@ -311,6 +383,82 @@ export default function ArticlesPage() {
                   className="w-full rounded-md border border-gray-300 px-3 py-2"
                 />
               </div>
+            </div>
+
+            <div className="border-t pt-3">
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                <input
+                  type="checkbox"
+                  checked={form.is_transformable}
+                  onChange={(e) => setForm({ ...form, is_transformable: e.target.checked })}
+                  className="rounded border-gray-300"
+                />
+                Cet article est transformable
+              </label>
+              <p className="text-xs text-gray-400 mt-1">
+                Ex: un carton de 5kg qui peut être détaché en plusieurs seaux.
+              </p>
+              {!form.is_transformable && editingQuantitySecondaire > 0 && (
+                <p className="text-xs text-amber-600 mt-1">
+                  Il reste {editingQuantitySecondaire} unité(s) en forme secondaire pour cet article : elles
+                  doivent d&apos;abord être retransformées (page Transformations) avant de pouvoir désactiver
+                  cette option.
+                </p>
+              )}
+
+              {form.is_transformable && (
+                <div className="mt-3 space-y-3 bg-gray-50 rounded-md p-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Forme principale</label>
+                      <input
+                        type="text"
+                        placeholder="Ex: carton"
+                        value={form.unit_principale}
+                        onChange={(e) => setForm({ ...form, unit_principale: e.target.value })}
+                        className="w-full rounded-md border border-gray-300 px-3 py-2"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Forme secondaire</label>
+                      <input
+                        type="text"
+                        placeholder="Ex: seau"
+                        value={form.unit_secondaire}
+                        onChange={(e) => setForm({ ...form, unit_secondaire: e.target.value })}
+                        className="w-full rounded-md border border-gray-300 px-3 py-2"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      1 {form.unit_principale || "forme principale"} = combien de {form.unit_secondaire || "forme secondaire"} ?
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={form.conversion_ratio}
+                      onChange={(e) => setForm({ ...form, conversion_ratio: e.target.value })}
+                      className="w-full rounded-md border border-gray-300 px-3 py-2"
+                      placeholder="Ex: 4"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Prix unitaire ({form.unit_secondaire || "forme secondaire"})
+                    </label>
+                    <input
+                      type="number"
+                      step="1"
+                      min="0"
+                      value={form.unit_price_secondaire}
+                      onChange={(e) => setForm({ ...form, unit_price_secondaire: e.target.value })}
+                      className="w-full rounded-md border border-gray-300 px-3 py-2"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
             {formError && <p className="text-sm text-red-600">{formError}</p>}

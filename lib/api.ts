@@ -223,6 +223,11 @@ export interface Product {
   quantity: number;
   unit: string;
   pack_size: number;
+  is_transformable: boolean;
+  unit_secondaire?: string | null;
+  conversion_ratio?: number | null;
+  unit_price_secondaire?: number | null;
+  quantity_secondaire: number;
   created_at: string;
 }
 
@@ -250,6 +255,8 @@ export interface ClientList {
   total_pages: number;
 }
 
+export type ProductForm = "principale" | "secondaire";
+
 export interface InvoiceLine {
   id: number;
   product_id: number;
@@ -257,6 +264,7 @@ export interface InvoiceLine {
   quantity: number;
   unit_price: number;
   line_total: number;
+  form?: ProductForm | null;
 }
 
 export type InvoiceStatus = "unpaid" | "partial" | "paid";
@@ -368,4 +376,34 @@ export interface Overview {
   rejected_shops: number;
   total_invoices: number;
   total_revenue: number;
+}
+
+export type TransformationDirection = "to_secondaire" | "to_principale";
+
+export interface TransformationLog {
+  id: number;
+  product_id: number;
+  product_name: string;
+  direction: TransformationDirection;
+  unit_from: string;
+  unit_to: string;
+  quantity_from: number;
+  quantity_to: number;
+  note?: string | null;
+  created_by_id?: number | null;
+  created_by_name?: string | null;
+  created_at: string;
+}
+
+export interface TransformationResult {
+  log: TransformationLog;
+  product: Product;
+}
+
+export interface TransformationLogList {
+  items: TransformationLog[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
 }

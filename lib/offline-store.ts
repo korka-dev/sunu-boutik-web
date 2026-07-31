@@ -7,7 +7,7 @@ interface InvoiceCreate {
   client_id?: number | null;
   client_name?: string | null;
   note?: string | null;
-  lines: { product_id: number; quantity: number; unit_price?: number | null }[];
+  lines: { product_id: number; quantity: number; unit_price?: number | null; form?: "principale" | "secondaire" | null }[];
 }
 
 // ── Numéro de facture temporaire ────────────────────────────────────────────
@@ -27,13 +27,17 @@ export async function createInvoiceOffline(
 ): Promise<LocalInvoice> {
   const lines: LocalInvoiceLine[] = payload.lines.map((l) => {
     const prod = products.find((p) => p.serverId === l.product_id || p.localId === l.product_id);
-    const unit_price = l.unit_price ?? prod?.unit_price ?? 0;
+    const form = prod?.is_transformable ? l.form || "principale" : null;
+    const defaultPrice = form === "secondaire" ? prod?.unit_price_secondaire : prod?.unit_price;
+    const unit_price = l.unit_price ?? defaultPrice ?? 0;
+    const productLabel = form === "secondaire" ? ` (${prod?.unit_secondaire})` : form === "principale" ? ` (${prod?.unit})` : "";
     return {
       product_id: l.product_id,
-      product_name: prod?.name ?? `Article #${l.product_id}`,
+      product_name: `${prod?.name ?? `Article #${l.product_id}`}${productLabel}`,
       quantity: l.quantity,
       unit_price,
       line_total: unit_price * l.quantity,
+      form,
     };
   });
 
@@ -59,7 +63,11 @@ export async function createInvoiceOffline(
     const prod = await db.products.where("serverId").equals(l.product_id).first()
       ?? await db.products.get(l.product_id);
     if (prod?.localId) {
-      await db.products.update(prod.localId, { quantity: (prod.quantity ?? 0) - l.quantity });
+      if (prod.is_transformable && l.form === "secondaire") {
+        await db.products.update(prod.localId, { quantity_secondaire: (prod.quantity_secondaire ?? 0) - l.quantity });
+      } else {
+        await db.products.update(prod.localId, { quantity: (prod.quantity ?? 0) - l.quantity });
+      }
     }
   }
 

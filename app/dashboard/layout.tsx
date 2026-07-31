@@ -16,9 +16,19 @@ function IconPlus({ className = "w-5 h-5" }: { className?: string }) {
   );
 }
 
+function IconSwap({ className = "w-[18px] h-[18px]" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M4 8h13M17 8l-3.5-3.5M17 8l-3.5 3.5" />
+      <path d="M20 16H7M7 16l3.5-3.5M7 16l3.5 3.5" />
+    </svg>
+  );
+}
+
 const navItems = [
   { href: "/dashboard/categories", label: "Catégories", Icon: IconTag },
   { href: "/dashboard/articles", label: "Articles", Icon: IconBox },
+  { href: "/dashboard/transformations", label: "Transformations", Icon: IconSwap },
   { href: "/dashboard/clients", label: "Clients", Icon: IconUsers },
   { href: "/dashboard/factures", label: "Factures", Icon: IconReceipt },
   { href: "/dashboard/caisse", label: "Caisse", Icon: IconCash },
