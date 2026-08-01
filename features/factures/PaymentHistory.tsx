@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import SkeletonRows from "@/components/SkeletonRows";
-import { api, ApiError, Payment } from "@/lib/api";
+import { ApiError } from "@/lib/api";
+import { fetchPayments, voidPayment } from "./factures.api";
+import { Payment } from "./factures.types";
 
 export default function PaymentHistory({
   invoiceId,
@@ -24,8 +26,7 @@ export default function PaymentHistory({
   useEffect(() => {
     setLoading(true);
     setError("");
-    api
-      .get<Payment[]>(`/invoices/${invoiceId}/payments`)
+    fetchPayments(invoiceId)
       .then(setPayments)
       .catch((err) => setError(err instanceof ApiError ? err.message : "Erreur de chargement"))
       .finally(() => setLoading(false));
@@ -48,7 +49,7 @@ export default function PaymentHistory({
     setVoidError("");
     setVoidingId(payment.id);
     try {
-      await api.post(`/invoices/${invoiceId}/payments/${payment.id}/void`, { reason: reason.trim() });
+      await voidPayment(invoiceId, payment.id, reason.trim());
       onVoided?.();
     } catch (err) {
       setVoidError(err instanceof ApiError ? err.message : "Erreur lors de l'annulation");

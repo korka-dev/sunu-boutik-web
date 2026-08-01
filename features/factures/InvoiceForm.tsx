@@ -2,7 +2,13 @@
 
 import { useCallback, useEffect, useState } from "react";
 import SearchSelect from "@/components/SearchSelect";
-import { api, ApiError, Client, ClientList, fetchAllPages, Invoice, Product, ProductForm, ProductList } from "@/lib/api";
+import { ApiError } from "@/lib/api";
+import { Client } from "@/features/clients/clients.types";
+import { fetchAllClients } from "@/features/clients/clients.api";
+import { Product, ProductForm } from "@/features/products/products.types";
+import { fetchAllProducts } from "@/features/products/products.api";
+import { createInvoice, updateInvoice } from "./factures.api";
+import { Invoice } from "./factures.types";
 
 const DRAFT_KEY = "invoice_draft";
 
@@ -63,10 +69,7 @@ export default function InvoiceForm({
   const [draftRestored, setDraftRestored] = useState(false);
 
   useEffect(() => {
-    Promise.all([
-      fetchAllPages<Product>("/products", api.get<ProductList>),
-      fetchAllPages<Client>("/clients", api.get<ClientList>),
-    ]).then(([p, c]) => {
+    Promise.all([fetchAllProducts(), fetchAllClients()]).then(([p, c]) => {
       setProducts(p);
       setClients(c);
       if (isEdit) return;
@@ -191,9 +194,7 @@ export default function InvoiceForm({
         note: null,
         lines: validLines,
       };
-      const result = isEdit
-        ? await api.patch<Invoice>(`/invoices/${invoice!.id}`, payload)
-        : await api.post<Invoice>("/invoices", payload);
+      const result = isEdit ? await updateInvoice(invoice!.id, payload) : await createInvoice(payload);
       if (!isEdit) localStorage.removeItem(DRAFT_KEY);
       onSaved(result);
     } catch (err) {

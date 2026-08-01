@@ -2,7 +2,9 @@
 
 import { FormEvent, useState } from "react";
 import Modal from "@/components/Modal";
-import { api, ApiError, Invoice } from "@/lib/api";
+import { ApiError } from "@/lib/api";
+import { createPayment } from "./factures.api";
+import { Invoice } from "./factures.types";
 
 export default function PaymentModal({
   invoice,
@@ -48,7 +50,7 @@ export default function PaymentModal({
 
     setSubmitting(true);
     try {
-      await api.post(`/invoices/${invoice.id}/payments`, {
+      await createPayment(invoice.id, {
         amount: amountNum,
         amount_received: amountReceivedNum,
         note: note.trim() || null,

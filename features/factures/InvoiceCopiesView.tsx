@@ -1,7 +1,9 @@
 "use client";
 
 import { useLayoutEffect, useRef, useState } from "react";
-import { Client, Invoice, Shop } from "@/lib/api";
+import { Shop } from "@/lib/api";
+import { Client } from "@/features/clients/clients.types";
+import { Invoice } from "./factures.types";
 
 function numberToWords(n: number): string {
   const units = ["", "un", "deux", "trois", "quatre", "cinq", "six", "sept", "huit", "neuf",

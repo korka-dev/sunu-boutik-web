@@ -1,5 +1,9 @@
 import { db, SyncQueueItem, LocalInvoice, LocalProduct, LocalClient, LocalCategory } from "./db";
-import { getToken, fetchAllPages, Category, Client, Invoice, PaginatedList, Product } from "./api";
+import { getToken, fetchAllPages, PaginatedList } from "./api";
+import { Category } from "@/features/categories/categories.types";
+import { Product } from "@/features/products/products.types";
+import { Client } from "@/features/clients/clients.types";
+import { Invoice } from "@/features/factures/factures.types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 

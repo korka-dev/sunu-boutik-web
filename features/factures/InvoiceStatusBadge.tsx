@@ -1,4 +1,4 @@
-import { InvoiceStatus } from "@/lib/api";
+import { InvoiceStatus } from "./factures.types";
 
 export const STATUS_LABELS: Record<InvoiceStatus, string> = {
   unpaid: "Non payée",
