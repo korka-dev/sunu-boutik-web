@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import SearchBar from "@/components/SearchBar";
 import SkeletonRows from "@/components/SkeletonRows";
+import { fetchAllClients } from "@/features/clients/clients.api";
 import InvoiceStatusBadge, { STATUS_LABELS } from "./InvoiceStatusBadge";
+import { Invoice } from "./factures.types";
 import { fetchInvoicesExportBlob } from "./factures.api";
 import { useInvoices } from "./factures.hooks";
 
@@ -32,6 +34,20 @@ export default function FacturesPage() {
   const [exportTo, setExportTo] = useState(defaultDateTo);
   const [exporting, setExporting] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
+  const [clientNamesById, setClientNamesById] = useState<Map<number, string>>(new Map());
+
+  useEffect(() => {
+    fetchAllClients()
+      .then((clients) => setClientNamesById(new Map(clients.map((c) => [c.id, c.name]))))
+      .catch(() => {
+        // La colonne Client retombe alors sur "—" ; le reste de la page reste fonctionnel.
+      });
+  }, []);
+
+  const clientLabel = useMemo(
+    () => (inv: Invoice) => inv.client_name || (inv.client_id != null ? clientNamesById.get(inv.client_id) : undefined) || "—",
+    [clientNamesById]
+  );
 
   function onSearchChange(value: string) {
     setSearch(value);
@@ -125,6 +141,7 @@ export default function FacturesPage() {
           <thead className="bg-gray-50 text-gray-600 text-left">
             <tr>
               <th className="px-4 py-3">Numéro</th>
+              <th className="px-4 py-3">Client</th>
               <th className="px-4 py-3">Date</th>
               <th className="px-4 py-3">Statut</th>
               <th className="px-4 py-3 text-right">Total</th>
@@ -132,10 +149,10 @@ export default function FacturesPage() {
             </tr>
           </thead>
           <tbody>
-            {loading && <SkeletonRows cols={5} />}
+            {loading && <SkeletonRows cols={6} />}
             {!loading && invoices.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-gray-400">Aucune facture</td>
+                <td colSpan={6} className="px-4 py-6 text-center text-gray-400">Aucune facture</td>
               </tr>
             )}
             {invoices.map((inv) => (
@@ -145,6 +162,7 @@ export default function FacturesPage() {
                 className="border-t cursor-pointer hover:bg-gray-50"
               >
                 <td className="px-4 py-3 font-medium">{inv.number}</td>
+                <td className="px-4 py-3 text-gray-700">{clientLabel(inv)}</td>
                 <td className="px-4 py-3 text-gray-500">
                   {new Date(inv.created_at).toLocaleString("fr-FR")}
                 </td>
