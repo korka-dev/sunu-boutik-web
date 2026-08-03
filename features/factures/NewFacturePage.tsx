@@ -8,8 +8,6 @@ import { Client } from "@/features/clients/clients.types";
 import { fetchAllClients } from "@/features/clients/clients.api";
 import { Product, ProductForm } from "@/features/products/products.types";
 import { fetchAllProducts } from "@/features/products/products.api";
-import { createInvoiceOffline, getProductsOffline, getClientsOffline } from "@/lib/offline-store";
-import { useAuth } from "@/lib/auth-context";
 import { createInvoice } from "./factures.api";
 
 const DRAFT_KEY = "invoice_draft";
@@ -41,7 +39,6 @@ function loadDraft(): Draft | null {
 
 export default function NewFacturePage() {
   const router = useRouter();
-  const { shop } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [clientId, setClientId] = useState<number | "">("");
@@ -53,30 +50,9 @@ export default function NewFacturePage() {
 
   useEffect(() => {
     async function loadData() {
-      const shopId = shop?.id;
-
-      if (shopId) {
-        const [localProds, localClients] = await Promise.all([
-          getProductsOffline(shopId),
-          getClientsOffline(shopId),
-        ]);
-        if (localProds.length > 0) {
-          setProducts(localProds.map((p) => ({ ...p, id: p.serverId ?? p.localId! })));
-        }
-        if (localClients.length > 0) {
-          setClients(localClients.map((c) => ({ ...c, id: c.serverId ?? c.localId!, created_at: c.created_at })));
-        }
-      }
-
-      if (navigator.onLine) {
-        try {
-          const [p, c] = await Promise.all([fetchAllProducts(), fetchAllClients()]);
-          setProducts(p);
-          setClients(c);
-        } catch {
-          // On garde les données locales
-        }
-      }
+      const [p, c] = await Promise.all([fetchAllProducts(), fetchAllClients()]);
+      setProducts(p);
+      setClients(c);
 
       const draft = loadDraft();
       if (draft) {
@@ -87,8 +63,7 @@ export default function NewFacturePage() {
       }
     }
     loadData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shop?.id]);
+  }, []);
 
   const saveDraft = useCallback((cId: number | "", cName: string, ls: LineItem[]) => {
     localStorage.setItem(DRAFT_KEY, JSON.stringify({ clientId: cId, clientName: cName, lines: ls }));
@@ -183,30 +158,14 @@ export default function NewFacturePage() {
     }
     setSubmitting(true);
     try {
-      if (navigator.onLine) {
-        const result = await createInvoice({
-          client_id: clientId || null,
-          client_name: clientId ? null : clientName.trim() || null,
-          note: null,
-          lines: validLines,
-        });
-        localStorage.removeItem(DRAFT_KEY);
-        router.push(`/dashboard/factures/${result.id}`);
-      } else {
-        const localProds = shop?.id ? await getProductsOffline(shop.id) : [];
-        const inv = await createInvoiceOffline(
-          {
-            client_id: clientId || null,
-            client_name: clientId ? null : clientName.trim() || null,
-            note: null,
-            lines: validLines,
-          },
-          shop!.id,
-          localProds
-        );
-        localStorage.removeItem(DRAFT_KEY);
-        router.push(`/dashboard/factures/offline/${inv.localId}`);
-      }
+      const result = await createInvoice({
+        client_id: clientId || null,
+        client_name: clientId ? null : clientName.trim() || null,
+        note: null,
+        lines: validLines,
+      });
+      localStorage.removeItem(DRAFT_KEY);
+      router.push(`/dashboard/factures/${result.id}`);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Erreur lors de la création de la facture");
       setSubmitting(false);

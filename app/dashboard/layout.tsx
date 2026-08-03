@@ -4,8 +4,6 @@ import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { OfflineProvider } from "@/lib/offline-context";
-import OfflineIndicator from "@/components/OfflineIndicator";
 import { IconBox, IconCash, IconReceipt, IconTag, IconUsers, IconUser } from "@/components/Icons";
 
 function IconPlus({ className = "w-5 h-5" }: { className?: string }) {
@@ -60,8 +58,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <OfflineProvider>
-    <OfflineIndicator />
     <div className="flex flex-1 flex-col md:flex-row min-h-0">
       {/* Mobile top bar */}
       <div className="md:hidden no-print flex items-center justify-between px-4 py-3 bg-white border-b">
@@ -152,6 +148,5 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         })}
       </nav>
     </div>
-    </OfflineProvider>
   );
 }
