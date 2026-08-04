@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { ApiError } from "@/lib/api";
-import { Note } from "./notes.types";
-import { fetchNotes } from "./notes.api";
+import { BonClient } from "./bon-client.types";
+import { fetchBonsClients } from "./bon-client.api";
 
-export function useNotes(page: number, search: string) {
-  const [notes, setNotes] = useState<Note[]>([]);
+export function useBonsClients(page: number, search: string) {
+  const [bonsClients, setBonsClients] = useState<BonClient[]>([]);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -14,8 +14,8 @@ export function useNotes(page: number, search: string) {
     setLoading(true);
     setError("");
     try {
-      const list = await fetchNotes(page, search);
-      setNotes(list.items);
+      const list = await fetchBonsClients(page, search);
+      setBonsClients(list.items);
       setTotal(list.total);
       setTotalPages(list.total_pages);
     } catch (err) {
@@ -29,5 +29,5 @@ export function useNotes(page: number, search: string) {
     reload();
   }, [reload]);
 
-  return { notes, total, totalPages, loading, error, setError, reload };
+  return { bonsClients, total, totalPages, loading, error, setError, reload };
 }

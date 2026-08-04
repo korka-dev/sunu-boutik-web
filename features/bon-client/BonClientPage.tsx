@@ -4,18 +4,18 @@ import { FormEvent, useState } from "react";
 import Modal from "@/components/Modal";
 import SearchBar from "@/components/SearchBar";
 import { ApiError } from "@/lib/api";
-import { Note } from "./notes.types";
-import { createNote, deleteNote, updateNote } from "./notes.api";
-import { useNotes } from "./notes.hooks";
-import NoteCard from "./NoteCard";
+import { BonClient } from "./bon-client.types";
+import { createBonClient, deleteBonClient, updateBonClient } from "./bon-client.api";
+import { useBonsClients } from "./bon-client.hooks";
+import BonClientCard from "./BonClientCard";
 
-export default function NotesPage() {
+export default function BonClientPage() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
-  const { notes, total, totalPages, loading, error, setError, reload } = useNotes(page, search);
+  const { bonsClients, total, totalPages, loading, error, setError, reload } = useBonsClients(page, search);
 
   const [showFormModal, setShowFormModal] = useState(false);
-  const [viewingNote, setViewingNote] = useState<Note | null>(null);
+  const [viewingBonClient, setViewingBonClient] = useState<BonClient | null>(null);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -35,11 +35,11 @@ export default function NotesPage() {
     setShowFormModal(true);
   }
 
-  function openEdit(note: Note) {
-    setViewingNote(null);
-    setEditingId(note.id);
-    setTitle(note.title);
-    setContent(note.content);
+  function openEdit(bonClient: BonClient) {
+    setViewingBonClient(null);
+    setEditingId(bonClient.id);
+    setTitle(bonClient.title);
+    setContent(bonClient.content);
     setFormError("");
     setShowFormModal(true);
   }
@@ -54,19 +54,19 @@ export default function NotesPage() {
     const trimmedTitle = title.trim();
     const trimmedContent = content.trim();
     if (!trimmedTitle) {
-      setFormError("Le titre de la note est requis");
+      setFormError("Le titre du bon client est requis");
       return;
     }
     if (!trimmedContent) {
-      setFormError("Le contenu de la note est requis");
+      setFormError("Le contenu du bon client est requis");
       return;
     }
     setSubmitting(true);
     try {
       if (editingId) {
-        await updateNote(editingId, trimmedTitle, trimmedContent);
+        await updateBonClient(editingId, trimmedTitle, trimmedContent);
       } else {
-        await createNote(trimmedTitle, trimmedContent);
+        await createBonClient(trimmedTitle, trimmedContent);
         setPage(1);
       }
       closeFormModal();
@@ -79,10 +79,10 @@ export default function NotesPage() {
   }
 
   async function onDelete(id: number) {
-    if (!confirm("Supprimer cette note ?")) return;
+    if (!confirm("Supprimer ce bon client ?")) return;
     try {
-      await deleteNote(id);
-      setViewingNote(null);
+      await deleteBonClient(id);
+      setViewingBonClient(null);
       await reload();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Erreur lors de la suppression");
@@ -92,16 +92,16 @@ export default function NotesPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-bold text-gray-900">Notes</h1>
+        <h1 className="text-xl font-bold text-gray-900">Bons clients</h1>
         <button
           onClick={openCreate}
           className="bg-blue-600 text-white rounded-md px-3 sm:px-4 py-2 text-sm font-medium hover:bg-blue-700"
         >
-          + Nouvelle note
+          + Nouveau bon client
         </button>
       </div>
 
-      <SearchBar value={search} onChange={onSearchChange} placeholder="Rechercher une note (titre, contenu, date)..." />
+      <SearchBar value={search} onChange={onSearchChange} placeholder="Rechercher un bon client (titre, contenu, date)..." />
 
       {error && <p className="text-sm text-red-600">{error}</p>}
 
@@ -117,14 +117,20 @@ export default function NotesPage() {
         </div>
       )}
 
-      {!loading && notes.length === 0 && (
-        <p className="text-center text-gray-400 py-10">Aucune note</p>
+      {!loading && bonsClients.length === 0 && (
+        <p className="text-center text-gray-400 py-10">Aucun bon client</p>
       )}
 
-      {!loading && notes.length > 0 && (
+      {!loading && bonsClients.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {notes.map((note) => (
-            <NoteCard key={note.id} note={note} onOpen={setViewingNote} onEdit={openEdit} onDelete={onDelete} />
+          {bonsClients.map((bonClient) => (
+            <BonClientCard
+              key={bonClient.id}
+              bonClient={bonClient}
+              onOpen={setViewingBonClient}
+              onEdit={openEdit}
+              onDelete={onDelete}
+            />
           ))}
         </div>
       )}
@@ -132,7 +138,7 @@ export default function NotesPage() {
       {!loading && total > 0 && (
         <div className="flex items-center justify-between px-1 text-sm text-gray-500">
           <span>
-            {total} note{total > 1 ? "s" : ""} — page {page} / {totalPages}
+            {total} bon{total > 1 ? "s" : ""} client{total > 1 ? "s" : ""} — page {page} / {totalPages}
           </span>
           <div className="flex gap-2">
             <button
@@ -153,24 +159,24 @@ export default function NotesPage() {
         </div>
       )}
 
-      {viewingNote && (
-        <Modal title={viewingNote.title} onClose={() => setViewingNote(null)}>
+      {viewingBonClient && (
+        <Modal title={viewingBonClient.title} onClose={() => setViewingBonClient(null)}>
           <div className="space-y-4">
             <p className="text-xs text-gray-400">
-              Créée le {new Date(viewingNote.created_at).toLocaleString("fr-FR")}
-              {viewingNote.updated_at !== viewingNote.created_at &&
-                ` · modifiée le ${new Date(viewingNote.updated_at).toLocaleString("fr-FR")}`}
+              Créé le {new Date(viewingBonClient.created_at).toLocaleString("fr-FR")}
+              {viewingBonClient.updated_at !== viewingBonClient.created_at &&
+                ` · modifié le ${new Date(viewingBonClient.updated_at).toLocaleString("fr-FR")}`}
             </p>
-            <p className="text-sm text-gray-800 whitespace-pre-wrap">{viewingNote.content}</p>
+            <p className="text-sm text-gray-800 whitespace-pre-wrap">{viewingBonClient.content}</p>
             <div className="flex gap-3 pt-2">
               <button
-                onClick={() => openEdit(viewingNote)}
+                onClick={() => openEdit(viewingBonClient)}
                 className="flex-1 bg-blue-600 text-white rounded-md py-2 font-medium hover:bg-blue-700"
               >
                 Modifier
               </button>
               <button
-                onClick={() => onDelete(viewingNote.id)}
+                onClick={() => onDelete(viewingBonClient.id)}
                 className="flex-1 bg-red-50 text-red-600 rounded-md py-2 font-medium hover:bg-red-100"
               >
                 Supprimer
@@ -181,14 +187,14 @@ export default function NotesPage() {
       )}
 
       {showFormModal && (
-        <Modal title={editingId ? "Modifier la note" : "Nouvelle note"} onClose={closeFormModal}>
+        <Modal title={editingId ? "Modifier le bon client" : "Nouveau bon client"} onClose={closeFormModal}>
           <form onSubmit={onSubmit} className="space-y-4">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Titre</label>
               <input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="Titre de la note"
+                placeholder="Titre du bon client"
                 autoFocus
                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
@@ -198,7 +204,7 @@ export default function NotesPage() {
               <textarea
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
-                placeholder="Écrivez votre note ici..."
+                placeholder="Écrivez les détails du bon client ici..."
                 rows={6}
                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
               />

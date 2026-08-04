@@ -1,4 +1,4 @@
-export interface Note {
+export interface BonClient {
   id: number;
   title: string;
   content: string;
@@ -6,8 +6,8 @@ export interface Note {
   updated_at: string;
 }
 
-export interface NoteList {
-  items: Note[];
+export interface BonClientList {
+  items: BonClient[];
   total: number;
   page: number;
   page_size: number;

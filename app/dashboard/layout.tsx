@@ -30,7 +30,7 @@ const navItems = [
   { href: "/dashboard/clients", label: "Clients", Icon: IconUsers },
   { href: "/dashboard/factures", label: "Factures", Icon: IconReceipt },
   { href: "/dashboard/caisse", label: "Caisse", Icon: IconCash },
-  { href: "/dashboard/notes", label: "Notes", Icon: IconNote },
+  { href: "/dashboard/bons-clients", label: "Bons clients", Icon: IconNote },
   { href: "/dashboard/profil", label: "Profil", Icon: IconUser },
 ];
 
