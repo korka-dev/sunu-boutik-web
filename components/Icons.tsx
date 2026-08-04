@@ -74,6 +74,16 @@ export function IconCash({ className = "w-[18px] h-[18px]" }: { className?: stri
   );
 }
 
+export function IconNote({ className = "w-[18px] h-[18px]" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className}>
+      <path d="M6 3h9l4 4v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z" strokeLinejoin="round" />
+      <path d="M15 3v4h4" strokeLinejoin="round" />
+      <path d="M8 12h8M8 16h5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function IconInbox({ className = "w-[18px] h-[18px]" }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className}>

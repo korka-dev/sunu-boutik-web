@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { IconBox, IconCash, IconReceipt, IconTag, IconUsers, IconUser } from "@/components/Icons";
+import { IconBox, IconCash, IconNote, IconReceipt, IconTag, IconUsers, IconUser } from "@/components/Icons";
 
 function IconPlus({ className = "w-5 h-5" }: { className?: string }) {
   return (
@@ -30,6 +30,7 @@ const navItems = [
   { href: "/dashboard/clients", label: "Clients", Icon: IconUsers },
   { href: "/dashboard/factures", label: "Factures", Icon: IconReceipt },
   { href: "/dashboard/caisse", label: "Caisse", Icon: IconCash },
+  { href: "/dashboard/notes", label: "Notes", Icon: IconNote },
   { href: "/dashboard/profil", label: "Profil", Icon: IconUser },
 ];
 
